@@ -1,0 +1,2139 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>셀프 체크인</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --black:#0F0F0F;--white:#FAFAF8;--gray-50:#F7F7F5;--gray-100:#EFEFEC;
+  --gray-200:#E2E2DD;--gray-400:#AEAEA6;--gray-600:#6B6B62;
+  --accent:#B8966E;--accent-light:#F5EDE0;--accent-dark:#9A7A56;
+  --green:#4A9B6F;--red:#C75B5B;--blue:#5B7FC7;
+  --radius:14px;--tr:0.28s cubic-bezier(.4,0,.2,1);
+  --shadow:0 4px 24px rgba(0,0,0,.08);
+}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--white);color:var(--black);min-height:100vh}
+
+/* ═══════════════════════════════
+   GLOBAL NAV (mode switch)
+═══════════════════════════════ */
+.mode-nav{position:fixed;top:0;left:0;right:0;z-index:200;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 20px;background:var(--white);border-bottom:1px solid var(--gray-200)}
+.shop-brand{font-family:'Cormorant Garamond',serif;font-size:20px;font-style:italic;letter-spacing:.04em}
+.mode-toggle{display:flex;gap:6px}
+.mode-btn{padding:7px 14px;border-radius:20px;border:1.5px solid var(--gray-200);
+  font-size:12px;font-weight:600;cursor:pointer;transition:all var(--tr);background:transparent;
+  font-family:'Noto Sans KR',sans-serif;color:var(--gray-600);letter-spacing:.02em}
+.mode-btn.active{background:var(--black);color:var(--white);border-color:var(--black)}
+
+/* ═══════════════════════════════
+   PAGE CONTAINERS
+═══════════════════════════════ */
+.page{display:none;padding-top:64px;min-height:100vh}
+.page.active{display:block}
+
+/* ═══════════════════════════════
+   ── CHECKIN PAGE ──
+═══════════════════════════════ */
+.ci-wrap{max-width:460px;margin:0 auto;padding:0 20px 80px}
+
+/* step bar */
+.step-bar{display:flex;align-items:flex-start;padding:22px 0 6px;gap:0}
+.step-item{display:flex;flex-direction:column;align-items:center;flex:1;position:relative}
+.step-item:not(:last-child)::after{content:'';position:absolute;top:13px;left:50%;width:100%;
+  height:1.5px;background:var(--gray-200);z-index:0;transition:background var(--tr)}
+.step-item.done:not(:last-child)::after{background:var(--accent)}
+.step-dot{width:26px;height:26px;border-radius:50%;border:2px solid var(--gray-200);
+  background:var(--white);display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:600;color:var(--gray-400);position:relative;z-index:1;transition:all var(--tr)}
+.step-item.active .step-dot{border-color:var(--accent);background:var(--accent);color:var(--white)}
+.step-item.done .step-dot{border-color:var(--accent);background:var(--accent);color:var(--white)}
+.step-label{font-size:10px;color:var(--gray-400);margin-top:5px;letter-spacing:.04em;white-space:nowrap;transition:color var(--tr)}
+.step-item.active .step-label,.step-item.done .step-label{color:var(--accent);font-weight:600}
+
+/* screens */
+.ci-screen{display:none;animation:fadeUp .32s ease both}
+.ci-screen.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.scr-title{font-size:21px;font-weight:700;margin:20px 0 4px}
+.scr-desc{font-size:13px;color:var(--gray-600);margin-bottom:22px;line-height:1.65}
+
+/* input */
+.field{margin-bottom:16px}
+.field label{display:block;font-size:11px;font-weight:600;color:var(--gray-600);
+  letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px}
+.field input,.field select,.field textarea{
+  width:100%;padding:14px 16px;border:1.5px solid var(--gray-200);border-radius:var(--radius);
+  font-family:'Noto Sans KR',sans-serif;font-size:15px;color:var(--black);background:var(--white);
+  outline:none;transition:border-color var(--tr)}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent)}
+.field input::placeholder,.field textarea::placeholder{color:var(--gray-400);font-size:14px}
+.field select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23AEAEA6' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 14px center;padding-right:36px;cursor:pointer}
+.field textarea{resize:none;height:86px;line-height:1.6;font-size:14px}
+.err-msg{font-size:12px;color:var(--red);margin-top:5px;display:none}
+.err-msg.show{display:block}
+
+/* service tags */
+.service-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:6px}
+.svc-tag{padding:11px 6px;border:1.5px solid var(--gray-200);border-radius:10px;
+  font-size:13px;font-weight:500;cursor:pointer;transition:all var(--tr);text-align:center;background:var(--white)}
+.svc-tag:hover{border-color:var(--accent);background:var(--accent-light)}
+.svc-tag.on{border-color:var(--accent);background:var(--accent);color:var(--white)}
+
+/* reservation cards */
+.res-card{border:1.5px solid var(--gray-200);border-radius:var(--radius);padding:16px;
+  margin-bottom:10px;cursor:pointer;transition:all var(--tr);background:var(--white);
+  display:flex;align-items:center;gap:14px;position:relative}
+.res-card:hover,.res-card.selected{border-color:var(--accent);background:var(--accent-light)}
+.res-avatar{width:50px;height:50px;border-radius:50%;object-fit:cover;flex-shrink:0;background:var(--gray-100)}
+.res-avatar-placeholder{width:50px;height:50px;border-radius:50%;background:var(--accent-light);
+  display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;
+  color:var(--accent);flex-shrink:0}
+.res-info .ri-time{font-size:17px;font-weight:700}
+.res-info .ri-name{font-size:12px;color:var(--gray-600);margin-top:2px}
+.res-info .ri-svc{font-size:11px;background:var(--gray-100);color:var(--gray-600);
+  border-radius:20px;padding:2px 9px;display:inline-block;margin-top:5px;font-weight:500}
+.res-card.selected .ri-svc{background:var(--accent);color:var(--white)}
+.res-check{position:absolute;right:14px;top:50%;transform:translateY(-50%);
+  width:22px;height:22px;border-radius:50%;background:var(--accent);
+  display:none;align-items:center;justify-content:center;color:#fff;font-size:12px}
+.res-card.selected .res-check{display:flex}
+
+/* designer picker */
+.designer-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:6px}
+.des-card{border:1.5px solid var(--gray-200);border-radius:var(--radius);padding:14px 12px;
+  cursor:pointer;transition:all var(--tr);text-align:center;background:var(--white)}
+.des-card:hover,.des-card.on{border-color:var(--accent);background:var(--accent-light)}
+.des-card img{width:56px;height:56px;border-radius:50%;object-fit:cover;margin-bottom:8px;background:var(--gray-100)}
+.des-card .dc-ph{width:56px;height:56px;border-radius:50%;background:var(--accent-light);
+  display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;
+  color:var(--accent);margin:0 auto 8px}
+.des-card .dc-name{font-size:14px;font-weight:600}
+.des-card .dc-role{font-size:11px;color:var(--gray-600);margin-top:2px}
+
+/* seat grid */
+.seat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:20px}
+.seat-btn{aspect-ratio:1;border-radius:11px;border:1.5px solid var(--gray-200);
+  background:var(--white);font-family:'Noto Sans KR',sans-serif;font-size:14px;
+  font-weight:600;cursor:pointer;transition:all var(--tr);color:var(--black)}
+.seat-btn:hover{border-color:var(--accent);background:var(--accent-light);color:var(--accent)}
+.seat-btn.selected{border-color:var(--accent);background:var(--accent);color:var(--white)}
+.seat-btn.occupied{background:var(--gray-100);color:var(--gray-400);cursor:not-allowed;
+  border-color:var(--gray-100);font-size:10px;white-space:pre-line;line-height:1.3}
+
+/* summary */
+.sum-box{background:var(--gray-50);border-radius:var(--radius);padding:20px;margin-bottom:18px}
+.sum-row{display:flex;justify-content:space-between;align-items:center;
+  padding:9px 0;border-bottom:1px solid var(--gray-200);font-size:14px}
+.sum-row:last-child{border-bottom:none}
+.sum-row .sl{color:var(--gray-600);font-size:12px;font-weight:500;letter-spacing:.04em}
+.sum-row .sv{font-weight:600}
+.designer-summary{display:flex;align-items:center;gap:12px;
+  background:var(--white);border:1.5px solid var(--gray-200);border-radius:var(--radius);
+  padding:14px 16px;margin-bottom:16px}
+.designer-summary img{width:44px;height:44px;border-radius:50%;object-fit:cover;background:var(--gray-100)}
+.designer-summary .ds-ph{width:44px;height:44px;border-radius:50%;background:var(--accent-light);
+  display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;color:var(--accent);flex-shrink:0}
+.designer-summary .ds-name{font-size:15px;font-weight:700}
+.designer-summary .ds-role{font-size:12px;color:var(--gray-600);margin-top:2px}
+.notify-badge{display:flex;align-items:center;gap:10px;background:#FFF9F0;
+  border:1px solid #F0DEBB;border-radius:10px;padding:12px 14px;margin-bottom:20px;
+  font-size:12px;color:#8A6A3A;line-height:1.5}
+
+/* success */
+.success-wrap{text-align:center;padding:36px 0}
+.success-circle{width:76px;height:76px;border-radius:50%;background:var(--accent);
+  display:flex;align-items:center;justify-content:center;font-size:34px;
+  margin:0 auto 20px;animation:popIn .5s cubic-bezier(.34,1.56,.64,1) both}
+@keyframes popIn{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+.success-title{font-size:22px;font-weight:700;margin-bottom:8px}
+.success-desc{font-size:14px;color:var(--gray-600);line-height:1.7;margin-bottom:28px}
+.pulse-dot{display:inline-block;width:8px;height:8px;border-radius:50%;
+  background:#4CAF50;margin-right:5px;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+.final-card{background:var(--gray-50);border-radius:var(--radius);padding:18px;text-align:left;margin-bottom:10px}
+.final-card .fc-row{display:flex;justify-content:space-between;font-size:14px;padding:5px 0}
+.final-card .fc-row span:first-child{color:var(--gray-600)}
+.final-card .fc-row span:last-child{font-weight:600}
+
+/* buttons */
+.btn-primary{width:100%;padding:16px;border-radius:var(--radius);border:none;
+  background:var(--black);color:var(--white);font-family:'Noto Sans KR',sans-serif;
+  font-size:15px;font-weight:700;letter-spacing:.04em;cursor:pointer;transition:all var(--tr);margin-top:6px}
+.btn-primary:hover{background:#2a2a2a;transform:translateY(-1px)}
+.btn-primary:disabled{background:var(--gray-200);color:var(--gray-400);cursor:not-allowed;transform:none}
+.btn-ghost{width:100%;padding:13px;border-radius:var(--radius);border:1.5px solid var(--gray-200);
+  background:transparent;color:var(--gray-600);font-family:'Noto Sans KR',sans-serif;
+  font-size:14px;cursor:pointer;transition:all var(--tr);margin-top:9px}
+.btn-ghost:hover{border-color:var(--gray-400);color:var(--black)}
+.sec-label{font-size:11px;font-weight:600;color:var(--gray-600);letter-spacing:.1em;
+  text-transform:uppercase;margin-bottom:11px;margin-top:4px}
+
+/* ═══════════════════════════════
+   ── ADMIN PAGE ──
+═══════════════════════════════ */
+.admin-wrap{max-width:860px;margin:0 auto;padding:0 20px 80px}
+.admin-tabs{display:flex;gap:0;border-bottom:2px solid var(--gray-200);margin:20px 0 28px;overflow-x:auto}
+.admin-tab{padding:12px 20px;font-size:14px;font-weight:600;color:var(--gray-600);
+  cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all var(--tr);
+  white-space:nowrap;background:none;border-top:none;border-left:none;border-right:none;
+  font-family:'Noto Sans KR',sans-serif}
+.admin-tab.active{color:var(--black);border-bottom-color:var(--black)}
+
+.admin-panel{display:none}
+.admin-panel.active{display:block}
+
+/* ── Checkin status ── */
+.checkin-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.checkin-header h2{font-size:18px;font-weight:700}
+.live-badge{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--green);font-weight:600}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 1.5s infinite}
+.checkin-table{width:100%;border-collapse:collapse;font-size:14px}
+.checkin-table th{text-align:left;padding:10px 12px;font-size:11px;font-weight:600;
+  color:var(--gray-600);letter-spacing:.08em;text-transform:uppercase;border-bottom:2px solid var(--gray-200)}
+.checkin-table td{padding:13px 12px;border-bottom:1px solid var(--gray-100);vertical-align:middle}
+.checkin-table tr:hover td{background:var(--gray-50)}
+.status-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;
+  border-radius:20px;font-size:11px;font-weight:600}
+.status-badge.waiting{background:#FFF3E0;color:#E08A00}
+.status-badge.inprogress{background:#E8F5E9;color:#2E7D32}
+.status-badge.done{background:var(--gray-100);color:var(--gray-600)}
+.small-avatar{width:32px;height:32px;border-radius:50%;object-fit:cover;background:var(--gray-100);vertical-align:middle}
+.small-avatar-ph{width:32px;height:32px;border-radius:50%;background:var(--accent-light);
+  display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--accent)}
+.action-btn{padding:5px 11px;border-radius:6px;border:1.5px solid var(--gray-200);
+  background:transparent;font-size:12px;cursor:pointer;transition:all var(--tr);font-family:'Noto Sans KR',sans-serif}
+.action-btn:hover{border-color:var(--accent);color:var(--accent)}
+.action-btn.danger:hover{border-color:var(--red);color:var(--red)}
+
+/* ── Reservation manager ── */
+.section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.section-header h2{font-size:18px;font-weight:700}
+.btn-add{padding:9px 16px;border-radius:9px;border:none;background:var(--black);color:var(--white);
+  font-family:'Noto Sans KR',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all var(--tr)}
+.btn-add:hover{background:#333}
+.res-table{width:100%;border-collapse:collapse;font-size:14px}
+.res-table th{text-align:left;padding:10px 12px;font-size:11px;font-weight:600;
+  color:var(--gray-600);letter-spacing:.08em;text-transform:uppercase;border-bottom:2px solid var(--gray-200)}
+.res-table td{padding:12px;border-bottom:1px solid var(--gray-100);vertical-align:middle}
+.res-table tr:hover td{background:var(--gray-50)}
+
+/* ── Designer manager ── */
+.designer-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-bottom:20px}
+.designer-mgmt-card{border:1.5px solid var(--gray-200);border-radius:var(--radius);padding:20px 16px;
+  text-align:center;background:var(--white);transition:all var(--tr)}
+.designer-mgmt-card:hover{border-color:var(--accent);box-shadow:var(--shadow)}
+.designer-mgmt-card .dm-photo{width:72px;height:72px;border-radius:50%;object-fit:cover;
+  margin:0 auto 12px;display:block;background:var(--gray-100)}
+.designer-mgmt-card .dm-ph{width:72px;height:72px;border-radius:50%;background:var(--accent-light);
+  display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;
+  color:var(--accent);margin:0 auto 12px}
+.designer-mgmt-card .dm-name{font-size:15px;font-weight:700;margin-bottom:3px}
+.designer-mgmt-card .dm-role{font-size:12px;color:var(--gray-600);margin-bottom:12px}
+.dm-actions{display:flex;gap:7px;justify-content:center}
+.dm-btn{padding:6px 12px;border-radius:7px;border:1.5px solid var(--gray-200);
+  font-size:12px;cursor:pointer;transition:all var(--tr);background:transparent;
+  font-family:'Noto Sans KR',sans-serif}
+.dm-btn.edit:hover{border-color:var(--accent);color:var(--accent)}
+.dm-btn.del:hover{border-color:var(--red);color:var(--red)}
+.add-designer-card{border:2px dashed var(--gray-200);border-radius:var(--radius);padding:20px 16px;
+  text-align:center;cursor:pointer;transition:all var(--tr);background:transparent;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:170px}
+.add-designer-card:hover{border-color:var(--accent);background:var(--accent-light)}
+.add-designer-card .add-icon{font-size:28px;margin-bottom:8px;color:var(--gray-400)}
+.add-designer-card:hover .add-icon{color:var(--accent)}
+.add-designer-card span{font-size:13px;color:var(--gray-600);font-weight:500}
+.add-designer-card:hover span{color:var(--accent)}
+
+/* ── Modal ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;
+  display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(3px)}
+.modal-overlay.open{display:flex}
+.modal{background:var(--white);border-radius:20px;padding:28px 24px;width:100%;
+  max-width:440px;max-height:90vh;overflow-y:auto;animation:modalIn .3s ease}
+@keyframes modalIn{from{transform:scale(.95);opacity:0}to{transform:scale(1);opacity:1}}
+.modal-title{font-size:18px;font-weight:700;margin-bottom:20px;display:flex;
+  justify-content:space-between;align-items:center}
+.modal-close{font-size:20px;cursor:pointer;color:var(--gray-400);line-height:1;
+  background:none;border:none;padding:0}
+.modal-close:hover{color:var(--black)}
+.modal-footer{display:flex;gap:10px;margin-top:6px}
+.modal-footer .btn-cancel{flex:1;padding:13px;border-radius:var(--radius);
+  border:1.5px solid var(--gray-200);background:transparent;font-family:'Noto Sans KR',sans-serif;
+  font-size:14px;cursor:pointer;transition:all var(--tr)}
+.modal-footer .btn-cancel:hover{border-color:var(--gray-400)}
+.modal-footer .btn-save{flex:2;padding:13px;border-radius:var(--radius);border:none;
+  background:var(--black);color:var(--white);font-family:'Noto Sans KR',sans-serif;
+  font-size:14px;font-weight:700;cursor:pointer;transition:all var(--tr)}
+.modal-footer .btn-save:hover{background:#333}
+
+/* photo upload */
+.photo-upload-area{border:2px dashed var(--gray-200);border-radius:12px;padding:24px;
+  text-align:center;cursor:pointer;transition:all var(--tr);margin-bottom:16px;position:relative}
+.photo-upload-area:hover{border-color:var(--accent);background:var(--accent-light)}
+.photo-upload-area input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.photo-preview{width:80px;height:80px;border-radius:50%;object-fit:cover;margin:0 auto 10px;display:block}
+.photo-upload-placeholder{font-size:32px;margin-bottom:6px}
+.photo-upload-label{font-size:13px;color:var(--gray-600)}
+
+/* stats row */
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}
+.stat-card{background:var(--gray-50);border-radius:var(--radius);padding:16px 14px;text-align:center}
+.stat-num{font-size:28px;font-weight:700;margin-bottom:4px}
+.stat-label{font-size:11px;color:var(--gray-600);font-weight:500;letter-spacing:.04em}
+.stat-card.accent .stat-num{color:var(--accent)}
+.stat-card.green .stat-num{color:var(--green)}
+
+/* empty state */
+.empty-state{text-align:center;padding:40px 20px;color:var(--gray-400)}
+.empty-state .ei{font-size:36px;margin-bottom:10px}
+.empty-state p{font-size:13px;line-height:1.6}
+
+/* responsive */
+@media(max-width:500px){
+  .designer-grid{grid-template-columns:repeat(2,1fr)}
+  .service-grid{grid-template-columns:repeat(2,1fr)}
+  .checkin-table,.res-table{font-size:12px}
+  .checkin-table th,.checkin-table td,.res-table th,.res-table td{padding:9px 7px}
+}
+
+/* ── 방문 유형 선택 ── */
+.visit-type-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:22px}
+.visit-type-card{border:1.5px solid var(--gray-200);border-radius:var(--radius);
+  padding:22px 14px;text-align:center;cursor:pointer;transition:all var(--tr);background:var(--white)}
+.visit-type-card:hover{border-color:var(--accent);background:var(--accent-light)}
+.visit-type-card.selected{border-color:var(--accent);background:var(--accent-light)}
+.vt-icon{font-size:28px;margin-bottom:8px}
+.vt-label{font-size:14px;font-weight:700;margin-bottom:3px}
+.vt-desc{font-size:11px;color:var(--gray-600)}
+.divider-label{font-size:11px;font-weight:600;color:var(--gray-400);letter-spacing:.1em;
+  text-transform:uppercase;text-align:center;margin-bottom:18px;position:relative}
+.divider-label::before,.divider-label::after{content:'';position:absolute;top:50%;
+  width:30%;height:1px;background:var(--gray-200)}
+.divider-label::before{left:0}.divider-label::after{right:0}
+
+/* 워크인 배지 */
+.walkin-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;
+  border-radius:20px;background:#EEF2FF;color:#4B6BDB;font-size:11px;font-weight:600;margin-left:6px}
+
+/* 환영 화면 */
+.welcome-screen{
+  position:fixed; top:0; left:0; right:0; bottom:0; z-index:100;
+  background:var(--black); display:flex; align-items:center; justify-content:center;
+  flex-direction:column; text-align:center; padding:40px 30px;
+}
+.welcome-inner{ max-width:400px; width:100%; }
+.welcome-brand{
+  font-family:'Cormorant Garamond',serif; font-size:28px; font-style:italic;
+  letter-spacing:.08em; color:var(--accent); margin-bottom:6px;
+}
+.welcome-location{ font-size:13px; color:rgba(255,255,255,.5); letter-spacing:.1em; margin-bottom:28px; }
+.welcome-divider{ width:40px; height:1px; background:var(--accent); margin:0 auto 28px; }
+.welcome-msg{ font-size:26px; font-weight:700; color:var(--white); margin-bottom:12px; }
+.welcome-sub{ font-size:14px; color:rgba(255,255,255,.6); line-height:1.8; margin-bottom:48px; }
+.welcome-btn{
+  width:100%; padding:18px; background:var(--accent); color:var(--white);
+  border:none; border-radius:var(--radius); font-size:17px; font-weight:700;
+  cursor:pointer; font-family:'Noto Sans KR',sans-serif; letter-spacing:.04em;
+  transition:background var(--tr);
+}
+.welcome-btn:hover{ background:var(--accent-dark); }
+.welcome-screen.hidden{ display:none; }
+
+/* 디자이너 선택 그리드 (체크인) */
+.designer-select-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
+.des-select-card{border:1.5px solid var(--gray-200);border-radius:var(--radius);padding:16px 8px;
+  text-align:center;cursor:pointer;transition:all var(--tr);background:var(--white)}
+.des-select-card:hover{border-color:var(--accent);background:var(--accent-light)}
+.des-select-card.on{border-color:var(--accent);background:var(--accent);color:var(--white)}
+.des-select-card.on .dsc-role{color:rgba(255,255,255,.8)}
+.dsc-avatar{width:72px;height:72px;border-radius:50%;background:var(--accent-light);
+  display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;
+  color:var(--accent);margin:0 auto 10px;overflow:hidden;}
+.dsc-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.des-select-card.on .dsc-avatar{background:rgba(255,255,255,.2);color:var(--white)}
+.dsc-name{font-size:14px;font-weight:700;margin-bottom:2px}
+.dsc-role{font-size:11px;color:var(--gray-400)}
+
+/* 관리자 디자이너 카드 - 드래그 앤 드롭 */
+.designer-mgmt-card{ position:relative; cursor:default; }
+.dm-drag-handle{
+  position:absolute; top:8px; left:8px;
+  font-size:18px; color:var(--gray-400); cursor:grab;
+  line-height:1; user-select:none;
+}
+.dm-drag-handle:active{ cursor:grabbing; }
+.designer-mgmt-card.dragging{
+  opacity:0.4; border:2px dashed var(--accent);
+}
+.designer-mgmt-card.drag-over{
+  border-color:var(--accent); background:var(--accent-light);
+  transform:scale(1.02);
+}
+.dm-photo-wrap{position:relative;display:inline-block;margin-bottom:10px;}
+.designer-mgmt-card img.dm-photo,
+.designer-mgmt-card .dm-ph{
+  width:80px!important; height:80px!important;
+  border-radius:50%; object-fit:cover;
+}
+
+/* 시간 선택 그리드 */
+.time-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:20px}
+.time-card{border:1.5px solid var(--gray-200);border-radius:10px;padding:12px 4px;
+  text-align:center;cursor:pointer;transition:all var(--tr);background:var(--white);font-size:13px;font-weight:600}
+.time-card.booked{
+  background:var(--gray-100); border-color:var(--gray-200);
+  color:var(--gray-400); cursor:not-allowed;
+}
+.time-card.booked:hover{ border-color:var(--gray-200); background:var(--gray-100); }
+.time-card.on{border-color:var(--accent);background:var(--accent);color:var(--white)}
+
+/* 카운트다운 */
+.countdown-wrap{margin-top:20px;text-align:center}
+.countdown-msg{font-size:13px;color:var(--gray-600);margin-bottom:10px}
+.countdown-msg span{font-weight:700;color:var(--accent)}
+.countdown-bar-wrap{height:4px;background:var(--gray-200);border-radius:4px;overflow:hidden}
+.countdown-bar{height:100%;background:var(--accent);border-radius:4px;width:100%;
+  transition:width 1s linear}
+.slack-wrap{ display:flex; flex-direction:column; gap:0; }
+.slack-section{ padding:4px 0 20px; }
+.slack-guide{ display:flex; flex-direction:column; gap:10px; margin-bottom:14px; }
+.guide-step{ display:flex; align-items:flex-start; gap:12px; font-size:13px; line-height:1.6; }
+.guide-num{ width:24px; height:24px; border-radius:50%; background:var(--accent); color:var(--white);
+  font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+.slack-notice{ background:#FFF9F0; border:1px solid #F0DEBB; border-radius:10px;
+  padding:12px 14px; font-size:12px; color:#8A6A3A; line-height:1.6; }
+.slack-des-row{ display:flex; align-items:center; gap:10px;
+  border:1.5px solid var(--gray-200); border-radius:var(--radius); padding:12px 14px;
+  margin-bottom:8px; background:var(--gray-50); }
+.slack-des-info{ flex:1; min-width:0; }
+.slack-des-name{ font-size:14px; font-weight:600; margin-bottom:2px; }
+.slack-des-url{ font-size:11px; color:var(--gray-600); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.slack-des-url.set{ color:var(--green); }
+.slack-des-url.unset{ color:var(--gray-400); }
+.slack-status-ok{ color:var(--green); font-weight:600; }
+.slack-status-err{ color:var(--red); font-weight:600; }
+.menu-mgmt-wrap{ display:flex; flex-direction:column; gap:32px; }
+.menu-section{}
+.menu-item-list{ display:flex; flex-direction:column; gap:8px; margin-top:4px; }
+.menu-item-row{
+  display:flex; align-items:center; gap:12px;
+  background:var(--gray-50); border:1.5px solid var(--gray-200);
+  border-radius:var(--radius); padding:12px 14px;
+  transition:border-color var(--tr);
+}
+.menu-item-row:hover{ border-color:var(--accent); }
+.mir-emoji{ font-size:22px; width:32px; text-align:center; flex-shrink:0; }
+.mir-label{ flex:1; font-size:14px; font-weight:600; }
+.mir-actions{ display:flex; gap:6px; flex-shrink:0; }
+
+/* 음료/가운 옵션 그리드 */
+.option-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:6px; }
+.opt-card{
+  border:1.5px solid var(--gray-200); border-radius:12px; padding:14px 8px;
+  text-align:center; cursor:pointer; transition:all var(--tr); background:var(--white);
+}
+.opt-card:hover{ border-color:var(--accent); background:var(--accent-light); }
+.opt-card.on{ border-color:var(--accent); background:var(--accent); color:var(--white); }
+.opt-card.on .oc-label{ color:var(--white); }
+.opt-icon{ font-size:26px; margin-bottom:6px; }
+.oc-label{ font-size:12px; font-weight:600; color:var(--black); transition:color var(--tr); }
+.section-divider{ height:1px; background:var(--gray-200); margin:20px 0; }
+
+@media(max-width:500px){
+  .option-grid{ grid-template-columns:repeat(3,1fr); }
+}
+</style>
+</head>
+<body>
+
+<!-- GLOBAL NAV -->
+<nav class="mode-nav">
+  <div class="shop-brand">Maison de ID Hair</div>
+  <div class="mode-toggle" id="modeToggle">
+    <button class="mode-btn active" onclick="switchPage('checkin')">고객 체크인</button>
+    <button class="mode-btn" id="adminBtn" onclick="switchPage('admin')">관리자</button>
+  </div>
+</nav>
+
+<!-- ══════════════════════════════════════
+     CHECKIN PAGE
+══════════════════════════════════════ -->
+<div class="page active" id="page-checkin">
+<div class="ci-wrap">
+
+  <!-- ── 환영 화면 ── -->
+  <div id="welcomeScreen" class="welcome-screen">
+    <div class="welcome-inner">
+      <div class="welcome-brand">Maison de ID Hair</div>
+      <div class="welcome-location">반포자이점</div>
+      <div class="welcome-divider"></div>
+      <div class="welcome-msg">환영합니다 🙏</div>
+      <div class="welcome-sub">메종드아이디헤어 반포자이점입니다.<br>방문해 주셔서 감사합니다.</div>
+      <button class="welcome-btn" onclick="startCheckin()">체크인하기</button>
+    </div>
+  </div>
+
+  <!-- step bar -->
+  <div class="step-bar" id="stepBar" style="display:none">
+    <div class="step-item active" id="s1"><div class="step-dot">1</div><div class="step-label">정보입력</div></div>
+    <div class="step-item" id="s2"><div class="step-dot">2</div><div class="step-label">선생님</div></div>
+    <div class="step-item" id="s3"><div class="step-dot">3</div><div class="step-label">시간</div></div>
+    <div class="step-item" id="s4"><div class="step-dot">4</div><div class="step-label">시술</div></div>
+    <div class="step-item" id="s5"><div class="step-dot">5</div><div class="step-label">음료/가운</div></div>
+    <div class="step-item" id="s6"><div class="step-dot">6</div><div class="step-label">확인</div></div>
+  </div>
+
+  <!-- ── SCREEN 1: 방문 유형 선택 ── -->
+  <div class="ci-screen" id="ci1">
+    <div class="scr-title">방문 유형을 선택해 주세요</div>
+    <div class="visit-type-grid" style="margin-top:20px">
+      <div class="visit-type-card" onclick="selectVisitType('reservation')">
+        <div class="vt-icon">📋</div>
+        <div class="vt-label">예약 고객</div>
+        <div class="vt-desc">예약하신 분</div>
+      </div>
+      <div class="visit-type-card" onclick="selectVisitType('walkin')">
+        <div class="vt-icon">🚶</div>
+        <div class="vt-label">워크인 방문</div>
+        <div class="vt-desc">예약 없이 오신 분</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SCREEN 1-2: 정보 입력 ── -->
+  <div class="ci-screen" id="ci1b">
+    <div class="scr-title">고객 정보 입력</div>
+    <div class="scr-desc">성함과 전화번호 뒤 4자리를 입력해 주세요.</div>
+    <div class="field">
+      <label>성함</label>
+      <input type="text" id="nameInput" placeholder="홍길동"/>
+    </div>
+    <div class="field">
+      <label>전화번호 뒤 4자리</label>
+      <input type="tel" id="phoneInput" maxlength="4" placeholder="0000" inputmode="numeric"/>
+      <div class="err-msg" id="phoneErr">성함을 입력해 주세요.</div>
+    </div>
+    <button class="btn-primary" onclick="goStep2()">다음으로</button>
+    <button class="btn-ghost" onclick="ciGo(1)">← 이전으로</button>
+  </div>
+
+  <!-- ── SCREEN 2: 디자이너 선택 ── -->
+  <div class="ci-screen" id="ci2">
+    <div class="scr-title">담당 선생님 선택 ✂️</div>
+    <div class="scr-desc">담당 선생님을 선택해 주세요.</div>
+    <div class="designer-select-grid" id="designerSelectGrid"></div>
+    <button class="btn-ghost" onclick="ciGo(1)">← 이전으로</button>
+  </div>
+
+  <!-- ── SCREEN 3: 시간 선택 ── -->
+  <div class="ci-screen" id="ci3">
+    <div class="scr-title">예약 시간 선택 🕐</div>
+    <div class="scr-desc">예약하신 시간을 선택해 주세요.</div>
+    <div class="time-grid" id="timeGrid"></div>
+    <button class="btn-ghost" onclick="ciGo(2)">← 이전으로</button>
+  </div>
+
+  <!-- ── SCREEN 4: 시술 선택 ── -->
+  <div class="ci-screen" id="ci4">
+    <div class="scr-title">시술 선택 💇</div>
+    <div class="scr-desc">오늘 받으실 시술을 선택해 주세요. (복수 선택 가능)</div>
+    <div class="service-grid" id="serviceGrid"></div>
+    <button class="btn-primary" style="margin-top:10px" onclick="buildDrinkScreen();ciGo(5)">다음으로</button>
+    <button class="btn-ghost" onclick="ciGo(3)">← 이전으로</button>
+  </div>
+
+  <!-- ── SCREEN 5: 음료 선택 ── -->
+  <div class="ci-screen" id="ci5">
+    <div class="scr-title">음료 선택 ☕</div>
+    <div class="scr-desc">원하시는 음료를 선택해 주세요.</div>
+    <div class="option-grid" id="drinkGrid"></div>
+    <button class="btn-primary" style="margin-top:10px" onclick="buildGownScreen();ciGo(6)">다음으로</button>
+    <button class="btn-ghost" onclick="ciGo(4)">← 이전으로</button>
+  </div>
+
+  <!-- ── SCREEN 6: 가운 선택 ── -->
+  <div class="ci-screen" id="ci6">
+    <div class="scr-title">가운 선택 🥼</div>
+    <div class="scr-desc">원하시는 가운을 선택해 주세요.</div>
+    <div class="option-grid" id="gownGrid"></div>
+    <div class="field" style="margin-top:20px">
+      <label>요청사항 / 주의사항</label>
+      <textarea id="requestInput" placeholder="예) 두피 민감해요 / 많이 잘라주세요"></textarea>
+    </div>
+    <button class="btn-primary" onclick="goToConfirm()">다음으로</button>
+    <button class="btn-ghost" onclick="ciGo(5)">← 이전으로</button>
+  </div>
+
+  <!-- ── SCREEN 7: 확인 ── -->
+  <div class="ci-screen" id="ci7">
+    <div class="scr-title">체크인 확인</div>
+    <div class="scr-desc">내용을 확인하고 체크인을 완료해 주세요.</div>
+    <div id="designerSummaryWrap"></div>
+    <div class="sum-box" id="sumBox"></div>
+    <div class="notify-badge">
+      💬&nbsp;&nbsp;체크인 완료 시 담당 선생님께 알림이 전송됩니다.
+    </div>
+    <button class="btn-primary" onclick="doCheckIn()">✓ 체크인 완료하기</button>
+    <button class="btn-ghost" onclick="ciGo(6)">← 이전으로</button>
+  </div>
+
+  <!-- ── SCREEN 8: 완료 ── -->
+  <div class="ci-screen" id="ci8">
+    <div class="success-wrap">
+      <div class="success-circle">✓</div>
+      <div class="success-title">체크인 완료!</div>
+      <div class="success-desc"><span class="pulse-dot"></span>잠시만 기다려 주시면 곧 안내드릴게요 😊</div>
+      <div class="final-card" id="finalCard"></div>
+      <div id="slackResultBadge" class="notify-badge" style="display:none;margin-top:14px">📨&nbsp;&nbsp;슬랙 알림 발송 중...</div>
+      <div class="countdown-wrap" id="countdownWrap">
+        <div class="countdown-msg">잠시 후 <span id="countdownNum">15</span>초 뒤 처음 화면으로 돌아갑니다.</div>
+        <div class="countdown-bar-wrap"><div class="countdown-bar" id="countdownBar"></div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ══════════════════════════════════════
+     ADMIN PAGE
+══════════════════════════════════════ -->
+<div class="page" id="page-admin">
+<div class="admin-wrap">
+
+  <div class="admin-tabs">
+    <button class="admin-tab active" onclick="switchTab('checkin-status')">체크인 현황</button>
+    <button class="admin-tab" onclick="switchTab('reservations')">예약 관리</button>
+    <button class="admin-tab" onclick="switchTab('designers')">디자이너 관리</button>
+    <button class="admin-tab" onclick="switchTab('menus')">메뉴 관리</button>
+    <button class="admin-tab" onclick="switchTab('slack')">🔔 슬랙 설정</button>
+    <button class="admin-tab" onclick="switchTab('settings')">⚙️ 설정</button>
+  </div>
+
+  <!-- ── TAB: 체크인 현황 ── -->
+  <div class="admin-panel active" id="tab-checkin-status">
+    <div class="stats-row" id="statsRow"></div>
+    <div class="checkin-header">
+      <h2>오늘의 체크인</h2>
+      <div class="live-badge"><div class="live-dot"></div>실시간</div>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="checkin-table" id="checkinTable">
+        <thead><tr>
+          <th>디자이너</th><th>고객명</th><th>예약시간</th><th>시술</th><th>상태</th><th>관리</th>
+        </tr></thead>
+        <tbody id="checkinTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── TAB: 예약 관리 ── -->
+  <div class="admin-panel" id="tab-reservations">
+    <div class="section-header">
+      <h2>예약 목록</h2>
+      <div style="display:flex;gap:8px">
+        <button class="btn-add danger-btn" id="bulkDeleteBtn" onclick="bulkDeleteRes()" style="display:none;background:var(--red);color:white;border-color:var(--red)">선택 삭제</button>
+        <button class="btn-add" onclick="openResModal()">+ 예약 추가</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="res-table" id="resTable">
+        <thead><tr>
+          <th><input type="checkbox" id="selectAllRes" onclick="toggleSelectAll(this)"></th>
+          <th>날짜</th><th>시간</th><th>고객명</th><th>전화(뒷4)</th><th>디자이너</th><th>시술</th><th>관리</th>
+        </tr></thead>
+        <tbody id="resTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── TAB: 디자이너 관리 ── -->
+  <div class="admin-panel" id="tab-designers">
+    <div class="section-header">
+      <h2>디자이너</h2>
+      <button class="btn-add" onclick="openDesModal(null)">+ 추가</button>
+    </div>
+    <div class="designer-cards" id="designerCards"></div>
+  </div>
+
+  <!-- ── TAB: 메뉴 관리 ── -->
+  <div class="admin-panel" id="tab-menus">
+    <div class="menu-mgmt-wrap">
+
+      <!-- 시술 메뉴 -->
+      <div class="menu-section">
+        <div class="section-header">
+          <h2>✂️ 시술 메뉴</h2>
+          <button class="btn-add" onclick="openMenuModal('service')">+ 항목 추가</button>
+        </div>
+        <div class="menu-item-list" id="serviceMenuList"></div>
+      </div>
+
+      <!-- 음료 메뉴 -->
+      <div class="menu-section">
+        <div class="section-header">
+          <h2>☕ 음료 메뉴</h2>
+          <button class="btn-add" onclick="openMenuModal('drink')">+ 항목 추가</button>
+        </div>
+        <div class="menu-item-list" id="drinkMenuList"></div>
+      </div>
+
+      <!-- 가운 메뉴 -->
+      <div class="menu-section">
+        <div class="section-header">
+          <h2>🥼 가운 메뉴</h2>
+          <button class="btn-add" onclick="openMenuModal('gown')">+ 항목 추가</button>
+        </div>
+        <div class="menu-item-list" id="gownMenuList"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── TAB: 슬랙 설정 ── -->
+  <div class="admin-panel" id="tab-slack">
+    <div class="slack-wrap">
+
+      <!-- 전체 알림 채널 -->
+      <div class="slack-section">
+        <h2 style="font-size:16px;font-weight:700;margin-bottom:6px">📢 전체 알림 채널</h2>
+        <p style="font-size:12px;color:var(--gray-600);margin-bottom:14px;line-height:1.6">모든 체크인 알림을 받을 슬랙 채널 Webhook URL을 입력하세요.<br>디자이너 개별 URL이 없으면 이 채널로 발송됩니다.</p>
+        <div class="field">
+          <label>Webhook URL</label>
+          <input type="url" id="slackGlobalUrl" placeholder="https://hooks.slack.com/services/..." style="font-size:13px"/>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn-add" onclick="saveSlackGlobal()" style="flex:1">저장</button>
+          <button class="action-btn" onclick="testSlack('global')" style="padding:9px 16px;font-size:13px">테스트 발송</button>
+        </div>
+        <div id="slackGlobalStatus" style="font-size:12px;margin-top:8px;display:none"></div>
+      </div>
+
+      <div class="section-divider"></div>
+
+      <!-- 디자이너별 Webhook -->
+      <div class="slack-section">
+        <h2 style="font-size:16px;font-weight:700;margin-bottom:6px">👤 디자이너별 개인 채널</h2>
+        <p style="font-size:12px;color:var(--gray-600);margin-bottom:14px;line-height:1.6">디자이너마다 개인 슬랙 채널 URL을 등록하면<br>본인 고객이 체크인할 때만 해당 채널로 알림이 갑니다.</p>
+        <div id="slackDesignerList"></div>
+      </div>
+
+      <div class="section-divider"></div>
+
+      <!-- 슬랙 연동 가이드 -->
+      <div class="slack-section">
+        <h2 style="font-size:16px;font-weight:700;margin-bottom:10px">📖 슬랙 Webhook 설정 방법</h2>
+        <div class="slack-guide">
+          <div class="guide-step"><span class="guide-num">1</span><div><strong>슬랙 앱 디렉토리</strong>에서 <em>Incoming WebHooks</em> 검색 후 설치</div></div>
+          <div class="guide-step"><span class="guide-num">2</span><div>알림을 받을 <strong>채널 선택</strong> (디자이너별로 DM 채널 따로 생성 권장)</div></div>
+          <div class="guide-step"><span class="guide-num">3</span><div>생성된 <strong>Webhook URL 복사</strong> (https://hooks.slack.com/services/...)</div></div>
+          <div class="guide-step"><span class="guide-num">4</span><div>위 입력란에 붙여넣고 <strong>저장 → 테스트 발송</strong>으로 확인</div></div>
+        </div>
+        <div class="slack-notice">
+          ⚠️ <strong>CORS 주의:</strong> 슬랙 Webhook은 브라우저에서 직접 호출 시 CORS 오류가 날 수 있어요.
+          이 경우 Chrome 확장 <em>CORS Unblock</em> 을 설치하거나, 실제 서비스 시엔 간단한 백엔드 프록시를 사용하세요.
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── TAB: 설정 ── -->
+  <div class="admin-panel" id="tab-settings">
+
+    <!-- QR 코드 -->
+    <div class="slack-section">
+      <h2 style="font-size:16px;font-weight:700;margin-bottom:6px">📱 셀프 체크인 QR코드</h2>
+      <p style="font-size:12px;color:var(--gray-600);margin-bottom:14px;line-height:1.6">
+        고객님이 QR코드를 스캔하면 바로 체크인 화면으로 이동해요.<br>
+        QR로 접속 시 관리자 버튼은 자동으로 숨겨져요.
+      </p>
+      <div style="display:flex;justify-content:center;margin-bottom:16px">
+        <div id="qrCodeWrap" style="background:white;padding:16px;border-radius:12px;border:1.5px solid var(--gray-200);display:inline-block"></div>
+      </div>
+      <div style="text-align:center;font-size:12px;color:var(--gray-600);margin-bottom:16px" id="qrUrlLabel"></div>
+      <button class="btn-add" onclick="downloadQR()" style="width:100%">📥 QR코드 이미지 다운로드</button>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <!-- 비밀번호 -->
+    <div class="slack-section">
+      <h2 style="font-size:16px;font-weight:700;margin-bottom:6px">🔒 관리자 비밀번호 변경</h2>
+      <p style="font-size:12px;color:var(--gray-600);margin-bottom:14px;line-height:1.6">
+        관리자 탭 진입 시 요구할 비밀번호를 설정해 주세요.<br>
+        비워두면 비밀번호 없이 접속 가능해요.
+      </p>
+      <div class="field">
+        <label>현재 비밀번호</label>
+        <input type="password" id="curPassInput" placeholder="현재 비밀번호 (없으면 비워두세요)"/>
+      </div>
+      <div class="field">
+        <label>새 비밀번호</label>
+        <input type="password" id="newPassInput" placeholder="새 비밀번호"/>
+      </div>
+      <div class="field">
+        <label>새 비밀번호 확인</label>
+        <input type="password" id="newPassConfirm" placeholder="새 비밀번호 다시 입력"/>
+      </div>
+      <div id="passChangeMsg" style="font-size:12px;margin-bottom:10px;display:none"></div>
+      <button class="btn-add" onclick="changeAdminPass()" style="width:100%">비밀번호 변경</button>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ══════════════════════════════════════
+     MODALS
+══════════════════════════════════════ -->
+
+<!-- 예약 추가/수정 모달 -->
+<div class="modal-overlay" id="resModal">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="resModalTitle">예약 추가</span>
+      <button class="modal-close" onclick="closeModal('resModal')">✕</button>
+    </div>
+    <div class="field"><label>고객 이름</label><input type="text" id="rm-name" placeholder="홍길동"/></div>
+    <div class="field"><label>전화번호 뒷 4자리</label><input type="tel" id="rm-phone" maxlength="4" placeholder="0000" inputmode="numeric"/></div>
+    <div class="field"><label>예약 날짜</label><input type="date" id="rm-date"/></div>
+    <div class="field"><label>예약 시간</label><input type="time" id="rm-time"/></div>
+    <div class="field">
+      <label>담당 디자이너</label>
+      <select id="rm-designer"></select>
+    </div>
+    <div class="field"><label>시술</label><input type="text" id="rm-service" placeholder="커트, 염색 등"/></div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('resModal')">취소</button>
+      <button class="btn-save" onclick="saveReservation()">저장하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 디자이너 추가/수정 모달 -->
+<div class="modal-overlay" id="desModal">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="desModalTitle">디자이너 추가</span>
+      <button class="modal-close" onclick="closeModal('desModal')">✕</button>
+    </div>
+    <div class="photo-upload-area" id="photoUploadArea" onclick="document.getElementById('photoFile').click()">
+      <input type="file" id="photoFile" accept="image/*" style="display:none" onchange="previewPhoto(event)"/>
+      <div id="photoPreviewWrap">
+        <div class="photo-upload-placeholder">📷</div>
+        <div class="photo-upload-label">프로필 사진 업로드<br><small style="color:var(--gray-400)">JPG, PNG 권장</small></div>
+      </div>
+    </div>
+    <div class="field"><label>이름</label><input type="text" id="dm-name" placeholder="김지연"/></div>
+    <div class="field">
+      <label>직급/역할</label>
+      <select id="dm-role">
+        <option>원장</option>
+        <option>수석부원장</option>
+        <option>부원장</option>
+        <option>선임수석실장</option>
+        <option>수석실장</option>
+        <option>실장</option>
+        <option>스타일리스트</option>
+      </select>
+    </div>
+    <div class="field"><label>연락처</label><input type="tel" id="dm-phone" placeholder="010-0000-0000"/></div>
+    <div class="field">
+      <label>슬랙 Webhook URL <span style="font-size:10px;color:var(--gray-400);font-weight:400">(개인 채널 알림용)</span></label>
+      <input type="url" id="dm-slack" placeholder="https://hooks.slack.com/services/..." style="font-size:12px"/>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('desModal')">취소</button>
+      <button class="btn-save" onclick="saveDesigner()">저장하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 메뉴 항목 추가/수정 모달 -->
+<div class="modal-overlay" id="menuModal">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="menuModalTitle">항목 추가</span>
+      <button class="modal-close" onclick="closeModal('menuModal')">✕</button>
+    </div>
+    <div class="field">
+      <label>이모지</label>
+      <input type="text" id="mm-emoji" placeholder="☕" maxlength="4" style="font-size:24px;text-align:center"/>
+    </div>
+    <div class="field">
+      <label>항목 이름</label>
+      <input type="text" id="mm-label" placeholder="아메리카노"/>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('menuModal')">취소</button>
+      <button class="btn-save" onclick="saveMenuItem()">저장하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 관리자 비밀번호 모달 -->
+<div class="modal-overlay" id="adminPassModal">
+  <div class="modal" style="max-width:340px">
+    <div class="modal-title">
+      <span>🔒 관리자 로그인</span>
+    </div>
+    <p style="font-size:13px;color:var(--gray-600);margin-bottom:16px">비밀번호를 입력해 주세요.</p>
+    <div class="field">
+      <input type="password" id="adminPassInput" placeholder="비밀번호 입력" 
+        style="text-align:center;font-size:20px;letter-spacing:.3em"
+        onkeydown="if(event.key==='Enter')checkAdminPass()"/>
+      <div class="err-msg" id="adminPassErr" style="margin-top:8px">비밀번호가 틀렸어요.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('adminPassModal');resetPassInput()">취소</button>
+      <button class="btn-save" onclick="checkAdminPass()">확인</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal" style="max-width:340px">
+    <div class="modal-title">
+      <span id="confirmTitle">삭제 확인</span>
+    </div>
+    <p id="confirmMsg" style="font-size:14px;color:var(--gray-600);margin-bottom:20px;line-height:1.6"></p>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('confirmModal')">취소</button>
+      <button class="btn-save" id="confirmOkBtn" style="background:var(--red)" onclick="confirmOk()">삭제하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 슬랙 디자이너 URL 설정 모달 -->
+<div class="modal-overlay" id="slackDesModal">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="slackDesModalTitle">슬랙 채널 설정</span>
+      <button class="modal-close" onclick="closeModal('slackDesModal')">✕</button>
+    </div>
+    <p style="font-size:13px;color:var(--gray-600);margin-bottom:16px;line-height:1.6">
+      이 디자이너 담당 고객이 체크인하면 아래 채널로 알림이 발송됩니다.<br>
+      비워두면 전체 알림 채널로 발송됩니다.
+    </p>
+    <div class="field">
+      <label>슬랙 Webhook URL</label>
+      <input type="url" id="sdm-url" placeholder="https://hooks.slack.com/services/..." style="font-size:12px"/>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('slackDesModal')">취소</button>
+      <button class="btn-save" onclick="saveSlackDesUrl()">저장하기</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════
+// DATA STORE
+// ══════════════════════════════
+let DB = {
+  designers: [
+    {id:1, name:"보배", role:"스타일리스트", phone:"", photo:null, slackUrl:""},
+    {id:2, name:"청아", role:"스타일리스트", phone:"", photo:null, slackUrl:""},
+    {id:3, name:"최고", role:"스타일리스트", phone:"", photo:null, slackUrl:""},
+    {id:4, name:"연우", role:"스타일리스트", phone:"", photo:null, slackUrl:""},
+    {id:5, name:"청림", role:"스타일리스트", phone:"", photo:null, slackUrl:""},
+    {id:6, name:"선우", role:"스타일리스트", phone:"", photo:null, slackUrl:""},
+    {id:7, name:"승철", role:"스타일리스트", phone:"", photo:null, slackUrl:""},
+    {id:8, name:"이안", role:"스타일리스트", phone:"", photo:null, slackUrl:""},
+    {id:9, name:"지유", role:"스타일리스트", phone:"", photo:null, slackUrl:""},
+  ],
+  reservations: [],
+
+  seats: [
+    {num:"1",occupied:false},{num:"2",occupied:true},{num:"3",occupied:false},
+    {num:"4",occupied:true}, {num:"5",occupied:false},{num:"6",occupied:false},
+    {num:"7",occupied:true}, {num:"8",occupied:false},
+  ],
+  services: [
+    {id:1,emoji:"✂️",label:"커트"},
+    {id:2,emoji:"🌀",label:"펌"},
+    {id:3,emoji:"🎨",label:"염색"},
+    {id:4,emoji:"🌿",label:"뿌리 염색"},
+    {id:5,emoji:"⚡",label:"탈색"},
+    {id:6,emoji:"💆",label:"케어 트리트먼트"},
+    {id:7,emoji:"🌱",label:"두피 케어"},
+    {id:8,emoji:"💨",label:"드라이"},
+  ],
+  drinks: [
+    {id:1,emoji:"🚫",label:"없음"},
+    {id:2,emoji:"💧",label:"물"},
+    {id:3,emoji:"☕",label:"아메리카노"},
+    {id:4,emoji:"🥛",label:"라떼"},
+    {id:5,emoji:"🍵",label:"녹차"},
+    {id:6,emoji:"🧃",label:"주스"},
+  ],
+  gowns: [
+    {id:1,emoji:"🚫",label:"없음"},
+    {id:2,emoji:"🥼",label:"일반 가운"},
+    {id:3,emoji:"👘",label:"대형 가운"},
+  ],
+  nextId: 1,
+  nextDesId: 10,
+  nextMenuId: 20,
+  slackGlobalUrl: "",
+  adminPassword: "",
+};
+
+// ══════════════════════════════
+// 로컬 스토리지 (Firebase 백업용)
+// ══════════════════════════════
+const STORAGE_KEY = 'hairCheckinDB';
+
+function _saveLocalStorage(){
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      designers: DB.designers, services: DB.services,
+      drinks: DB.drinks, gowns: DB.gowns, reservations: DB.reservations,
+      nextId: DB.nextId, nextDesId: DB.nextDesId, nextMenuId: DB.nextMenuId,
+      slackGlobalUrl: DB.slackGlobalUrl, adminPassword: DB.adminPassword,
+    }));
+  } catch(e){ console.warn('localStorage 저장 실패:', e); }
+}
+
+function _loadLocalStorage(){
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return;
+    const saved = JSON.parse(raw);
+    if(saved.designers)    DB.designers    = saved.designers;
+    if(saved.services)     DB.services     = saved.services;
+    if(saved.drinks)       DB.drinks       = saved.drinks;
+    if(saved.gowns)        DB.gowns        = saved.gowns;
+    if(saved.reservations) DB.reservations = saved.reservations;
+    if(saved.nextId)       DB.nextId       = saved.nextId;
+    if(saved.nextDesId)    DB.nextDesId    = saved.nextDesId;
+    if(saved.nextMenuId)   DB.nextMenuId   = saved.nextMenuId;
+    if(saved.slackGlobalUrl !== undefined) DB.slackGlobalUrl = saved.slackGlobalUrl;
+    if(saved.adminPassword  !== undefined) DB.adminPassword  = saved.adminPassword;
+  } catch(e){ console.warn('localStorage 로드 실패:', e); }
+}
+
+// saveDB 래퍼 — Firebase + localStorage 동시 저장
+async function saveDB(){
+  window._lastSaveTime = Date.now();
+  _saveLocalStorage();
+  if(window._firebaseSaveDB){
+    await window._firebaseSaveDB();
+  }
+}
+window._firebaseSaveDB = null; // Firebase 모듈이 설정
+
+// Check-in state
+let CI = { name:"", phone:"", designerId:null, time:"", services:[], drink:"없음", gown:"없음", request:"", isWalkin:false };
+
+// ══════════════════════════════
+// QR 모드 감지 & QR 코드 생성
+// ══════════════════════════════
+
+// QR 접속 감지 (?kiosk=1 파라미터)
+const _isKioskMode = new URLSearchParams(location.search).get('kiosk') === '1';
+if(_isKioskMode){
+  const adminBtn = document.getElementById('adminBtn');
+  if(adminBtn) adminBtn.style.display = 'none';
+}
+
+// QR URL = 현재 사이트 + ?kiosk=1
+const QR_URL = location.origin + location.pathname + '?kiosk=1';
+
+function initQR(){
+  const wrap = document.getElementById('qrCodeWrap');
+  const label = document.getElementById('qrUrlLabel');
+  if(!wrap) return;
+  wrap.innerHTML = '';
+  if(label) label.textContent = QR_URL;
+
+  // QRCode 라이브러리 사용
+  new QRCode(wrap, {
+    text: QR_URL,
+    width: 200,
+    height: 200,
+    colorDark: '#0F0F0F',
+    colorLight: '#FFFFFF',
+    correctLevel: QRCode.CorrectLevel.H,
+  });
+}
+
+function downloadQR(){
+  const canvas = document.querySelector('#qrCodeWrap canvas');
+  if(!canvas){ alert('QR 코드를 먼저 생성해 주세요.'); return; }
+  const link = document.createElement('a');
+  link.download = 'maison-checkin-qr.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+}
+function startCheckin(){
+  document.getElementById('welcomeScreen').classList.add('hidden');
+  document.getElementById('stepBar').style.display = 'flex';
+  ciShowScreen(1); setStep(1);
+}
+
+// 방문 유형 선택
+function selectVisitType(type){
+  CI.isWalkin = (type === 'walkin');
+  document.querySelectorAll('.visit-type-card').forEach(c=>c.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
+  setTimeout(()=>{ ciShowScreen('1b'); }, 200);
+}
+
+// ci1b 화면 전용 show
+function ciShowScreen(n){
+  document.querySelectorAll('.ci-screen').forEach(s=>s.classList.remove('active'));
+  const el = document.getElementById('ci'+n);
+  if(el) el.classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ══════════════════════════════
+// PAGE SWITCH
+// ══════════════════════════════
+function switchPage(p){
+  if(p === 'admin' && DB.adminPassword){
+    // 비밀번호 있으면 모달 표시
+    document.getElementById('adminPassInput').value = '';
+    document.getElementById('adminPassErr').classList.remove('show');
+    openModal('adminPassModal');
+    return;
+  }
+  _doSwitchPage(p);
+}
+
+function _doSwitchPage(p){
+  document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.mode-btn').forEach(el=>el.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  // mode-btn active 처리
+  document.querySelectorAll('.mode-btn').forEach(btn=>{
+    if(btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(`'${p}'`)){
+      btn.classList.add('active');
+    }
+  });
+  if(p==='admin') renderAdmin();
+}
+
+function checkAdminPass(){
+  const input = document.getElementById('adminPassInput').value;
+  const errEl = document.getElementById('adminPassErr');
+  if(input === DB.adminPassword){
+    closeModal('adminPassModal');
+    document.getElementById('adminPassInput').value = '';
+    errEl.classList.remove('show');
+    _doSwitchPage('admin');
+  } else {
+    errEl.classList.add('show');
+  }
+}
+
+function resetPassInput(){
+  document.getElementById('adminPassInput').value = '';
+  document.getElementById('adminPassErr').classList.remove('show');
+}
+
+function changeAdminPass(){
+  const cur = document.getElementById('curPassInput').value;
+  const nw  = document.getElementById('newPassInput').value;
+  const cf  = document.getElementById('newPassConfirm').value;
+  const msg = document.getElementById('passChangeMsg');
+
+  if(cur !== DB.adminPassword){
+    msg.style.display='block'; msg.style.color='var(--red)';
+    msg.textContent='현재 비밀번호가 틀렸어요.'; return;
+  }
+  if(nw !== cf){
+    msg.style.display='block'; msg.style.color='var(--red)';
+    msg.textContent='새 비밀번호가 일치하지 않아요.'; return;
+  }
+  DB.adminPassword = nw;
+  saveDB();
+  msg.style.display='block'; msg.style.color='var(--green)';
+  msg.textContent = nw ? '✅ 비밀번호가 변경됐어요!' : '✅ 비밀번호가 해제됐어요!';
+  document.getElementById('curPassInput').value = '';
+  document.getElementById('newPassInput').value = '';
+  document.getElementById('newPassConfirm').value = '';
+  setTimeout(()=>{ msg.style.display='none'; }, 3000);
+}
+
+function setStep(n){
+  [1,2,3,4,5,6].forEach(i=>{
+    const el=document.getElementById('s'+i);
+    if(!el) return;
+    el.className='step-item';
+    if(i<n) el.classList.add('done');
+    if(i===n) el.classList.add('active');
+  });
+}
+
+function ciGo(n){
+  const stepMap={1:1, '1b':1, 2:2, 3:3, 4:4, 5:5, 6:5, 7:6, 8:6};
+  setStep(stepMap[n]||1);
+  ciShowScreen(n);
+}
+
+// ── STEP 1: 정보 입력 ──
+function goStep2(){
+  const name = document.getElementById('nameInput').value.trim();
+  const phone = document.getElementById('phoneInput').value.trim();
+  const errEl = document.getElementById('phoneErr');
+  if(!name){ errEl.textContent='성함을 입력해 주세요.'; errEl.classList.add('show'); return; }
+  if(!phone){ errEl.textContent='전화번호 뒤 4자리를 입력해 주세요.'; errEl.classList.add('show'); return; }
+  errEl.classList.remove('show');
+  CI.name = name;
+  CI.phone = phone;
+  buildDesignerSelectGrid();
+  ciGo(2);
+}
+
+// ── STEP 2: 디자이너 선택 ──
+function buildDesignerSelectGrid(){
+  const grid = document.getElementById('designerSelectGrid');
+  grid.innerHTML = '';
+  CI.designerId = null;
+  DB.designers.forEach(d=>{
+    const card = document.createElement('div');
+    card.className = 'des-select-card';
+    const avatarContent = d.photo
+      ? `<img src="${d.photo}" alt="${d.name}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
+      : d.name[0];
+    card.innerHTML = `
+      <div class="dsc-avatar">${avatarContent}</div>
+      <div class="dsc-name">${d.name}</div>
+      <div class="dsc-role">${d.role}</div>`;
+    card.onclick = ()=>{
+      document.querySelectorAll('.des-select-card').forEach(c=>c.classList.remove('on'));
+      card.classList.add('on');
+      CI.designerId = d.id;
+      setTimeout(()=>{ buildTimeGrid(); ciGo(3); }, 200);
+    };
+    grid.appendChild(card);
+  });
+}
+
+// ── STEP 3: 시간 선택 ──
+function buildTimeGrid(){
+  const grid = document.getElementById('timeGrid');
+  grid.innerHTML = '';
+  CI.time = '';
+
+  // 해당 디자이너의 이미 예약된 시간 목록
+  const bookedTimes = DB.reservations
+    .filter(r => r.designerId === CI.designerId)
+    .map(r => r.time);
+
+  const times = [];
+  for(let h=10; h<=20; h++){
+    times.push(`${String(h).padStart(2,'0')}:00`);
+    if(h < 20) times.push(`${String(h).padStart(2,'0')}:30`);
+  }
+
+  times.forEach(t=>{
+    const isBooked = bookedTimes.includes(t);
+    const card = document.createElement('div');
+    card.className = 'time-card' + (isBooked ? ' booked' : '');
+    card.innerHTML = isBooked
+      ? `${t}<br><span style="font-size:10px;opacity:.7">예약됨</span>`
+      : t;
+
+    if(isBooked){
+      // 예약된 시간은 선택 불가
+      card.style.cursor = 'not-allowed';
+      card.title = '이미 예약된 시간입니다';
+    } else {
+      card.onclick = ()=>{
+        document.querySelectorAll('.time-card').forEach(c=>c.classList.remove('on'));
+        card.classList.add('on');
+        CI.time = t;
+        setTimeout(()=>{ buildServiceScreen(); ciGo(4); }, 200);
+      };
+    }
+    grid.appendChild(card);
+  });
+}
+
+// ── STEP 4: 시술 선택 ──
+function buildServiceScreen(){
+  const grid=document.getElementById('serviceGrid');grid.innerHTML='';
+  CI.services=[];
+  DB.services.forEach(s=>{
+    const tag=document.createElement('div');tag.className='svc-tag';
+    tag.innerHTML=`<div style="font-size:18px;margin-bottom:3px">${s.emoji}</div>${s.label}`;
+    tag.onclick=()=>{
+      tag.classList.toggle('on');
+      if(tag.classList.contains('on')) CI.services.push(s.label);
+      else CI.services=CI.services.filter(x=>x!==s.label);
+    };
+    grid.appendChild(tag);
+  });
+}
+
+// ── STEP 5: 음료 선택 ──
+function buildDrinkScreen(){
+  const grid=document.getElementById('drinkGrid');grid.innerHTML='';
+  CI.drink = DB.drinks.length ? DB.drinks[0].label : '없음';
+  DB.drinks.forEach((d,i)=>{
+    const card=document.createElement('div');card.className='opt-card'+(i===0?' on':'');
+    card.innerHTML=`<div class="opt-icon">${d.emoji}</div><div class="oc-label">${d.label}</div>`;
+    card.onclick=()=>{
+      document.querySelectorAll('#drinkGrid .opt-card').forEach(c=>c.classList.remove('on'));
+      card.classList.add('on'); CI.drink=d.label;
+    };
+    grid.appendChild(card);
+  });
+}
+
+// ── STEP 6: 가운 선택 ──
+function buildGownScreen(){
+  const grid=document.getElementById('gownGrid');grid.innerHTML='';
+  CI.gown = DB.gowns.length ? DB.gowns[0].label : '없음';
+  DB.gowns.forEach((g,i)=>{
+    const card=document.createElement('div');card.className='opt-card'+(i===0?' on':'');
+    card.innerHTML=`<div class="opt-icon">${g.emoji}</div><div class="oc-label">${g.label}</div>`;
+    card.onclick=()=>{
+      document.querySelectorAll('#gownGrid .opt-card').forEach(c=>c.classList.remove('on'));
+      card.classList.add('on'); CI.gown=g.label;
+    };
+    grid.appendChild(card);
+  });
+}
+
+// 음료 선택 화면으로 갈 때 음료/가운 빌드
+const _origCiGo5 = ()=>{
+  buildDrinkScreen();
+  ciShowScreen(5); setStep(5);
+};
+
+// ciGo(5) 오버라이드
+const _origCiGo = ciGo;
+
+function goToConfirm(){
+  CI.request = document.getElementById('requestInput').value.trim();
+  const des = DB.designers.find(d=>d.id===CI.designerId)||{};
+  document.getElementById('designerSummaryWrap').innerHTML=`
+    <div class="designer-summary">
+      <div class="ds-ph">${des.name?des.name[0]:'?'}</div>
+      <div>
+        <div class="ds-name">${des.name||''}</div>
+        <div class="ds-role">${des.role||''}</div>
+      </div>
+    </div>`;
+  const svcList = CI.services.length ? CI.services.join(', ') : '미선택';
+  document.getElementById('sumBox').innerHTML=`
+    <div class="sum-row"><span class="sl">고객 이름</span><span class="sv">${CI.name}</span></div>
+    <div class="sum-row"><span class="sl">예약 시간</span><span class="sv">${CI.time}</span></div>
+    <div class="sum-row"><span class="sl">시술 메뉴</span><span class="sv">${svcList}</span></div>
+    <div class="sum-row"><span class="sl">음료</span><span class="sv">${CI.drink}</span></div>
+    <div class="sum-row"><span class="sl">가운</span><span class="sv">${CI.gown}</span></div>
+    ${CI.request?`<div class="sum-row"><span class="sl">요청사항</span><span class="sv" style="text-align:right;max-width:65%;font-size:13px">${CI.request}</span></div>`:''}`;
+  ciShowScreen(7); setStep(6);
+}
+
+function doCheckIn(){
+  const des = DB.designers.find(d=>d.id===CI.designerId)||{};
+  const svcList = CI.services.length ? CI.services.join(', ') : '미선택';
+  DB.reservations.push({
+    id: DB.nextId++, customerName: CI.name,
+    phone: CI.phone.replace(/-/g,'').slice(-4)||'----',
+    time: CI.time, designerId: CI.designerId, service: svcList,
+    checkinStatus:'waiting', seat:null, request:CI.request,
+    drink:CI.drink, gown:CI.gown
+  });
+  saveDB();
+  document.getElementById('finalCard').innerHTML=`
+    <div class="fc-row"><span>고객명</span><span>${CI.name}</span></div>
+    <div class="fc-row"><span>담당 선생님</span><span>${des.name}</span></div>
+    <div class="fc-row"><span>예약 시간</span><span>${CI.time}</span></div>
+    <div class="fc-row"><span>시술</span><span>${svcList}</span></div>
+    <div class="fc-row"><span>음료</span><span>${CI.drink}</span></div>
+    <div class="fc-row"><span>가운</span><span>${CI.gown}</span></div>`;
+  ciShowScreen(8); setStep(6);
+  sendSlackCheckin({
+    desName: des.name, desRole: des.role||'', desSlackUrl: des.slackUrl||'',
+    customerName: CI.name, visitType: '방문',
+    time: CI.time, service: svcList, drink: CI.drink, gown: CI.gown, request: CI.request,
+  });
+  startCountdown();
+}
+
+let _countdownTimer = null;
+function startCountdown(){
+  let sec = 15;
+  const numEl = document.getElementById('countdownNum');
+  const barEl = document.getElementById('countdownBar');
+  if(!numEl || !barEl) return;
+  numEl.textContent = sec;
+  barEl.style.width = '100%';
+  if(_countdownTimer) clearInterval(_countdownTimer);
+  _countdownTimer = setInterval(()=>{
+    sec--;
+    numEl.textContent = sec;
+    barEl.style.width = (sec/15*100)+'%';
+    if(sec <= 0){ clearInterval(_countdownTimer); resetCI(); }
+  }, 1000);
+}
+
+function resetCI(){
+  if(_countdownTimer){ clearInterval(_countdownTimer); _countdownTimer=null; }
+  CI={ name:"", phone:"", designerId:null, time:"", services:[], drink:"없음", gown:"없음", request:"", isWalkin:false };
+  document.getElementById('nameInput').value='';
+  document.getElementById('phoneInput').value='';
+  document.getElementById('phoneErr').classList.remove('show');
+  document.getElementById('requestInput').value='';
+  document.querySelectorAll('.visit-type-card').forEach(c=>c.classList.remove('selected'));
+  // 환영 화면으로 복귀
+  document.querySelectorAll('.ci-screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('stepBar').style.display = 'none';
+  document.getElementById('welcomeScreen').classList.remove('hidden');
+}
+
+// 음료 화면 이동 시 빌드
+document.addEventListener('DOMContentLoaded', ()=>{
+  // ci5(음료), ci6(가운) 버튼 감지 위해 이미 HTML onclick으로 처리됨
+});
+
+
+// ══════════════════════════════
+// ADMIN RENDER
+// ══════════════════════════════
+function switchTab(t){
+  document.querySelectorAll('.admin-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.admin-tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if(t === 'settings') initQR();
+}
+
+function renderAdmin(){
+  renderStats();
+  renderCheckinTable();
+  renderResTable();
+  renderDesignerCards();
+  renderMenus();
+  renderSlackSettings();
+}
+
+function renderStats(){
+  const total=DB.reservations.length;
+  const checked=DB.reservations.filter(r=>r.checkinStatus).length;
+  const inprog=DB.reservations.filter(r=>r.checkinStatus==='inprogress').length;
+  document.getElementById('statsRow').innerHTML=`
+    <div class="stat-card accent"><div class="stat-num">${total}</div><div class="stat-label">전체 예약</div></div>
+    <div class="stat-card green"><div class="stat-num">${checked}</div><div class="stat-label">체크인 완료</div></div>
+    <div class="stat-card"><div class="stat-num">${inprog}</div><div class="stat-label">시술 중</div></div>`;
+}
+
+function getDesName(id){const d=DB.designers.find(x=>x.id===id);return d?d.name:'?';}
+function getDesPhoto(id){const d=DB.designers.find(x=>x.id===id);return d?d.photo:null;}
+
+function statusBadge(s){
+  const map={waiting:['대기중','waiting'],inprogress:['시술중','inprogress'],done:['완료','done']};
+  const [label,cls]=map[s]||['미체크인','done'];
+  return `<span class="status-badge ${cls}">${label}</span>`;
+}
+
+function renderCheckinTable(){
+  const tbody=document.getElementById('checkinTbody');tbody.innerHTML='';
+  const list=DB.reservations.filter(r=>r.checkinStatus);
+  if(!list.length){
+    tbody.innerHTML=`<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--gray-400);font-size:13px">아직 체크인한 고객이 없어요</td></tr>`;return;
+  }
+  list.forEach(r=>{
+    const photo=getDesPhoto(r.designerId);
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td>
+        ${photo?`<img class="small-avatar" src="${photo}" alt="">&nbsp;`:`<span class="small-avatar-ph">${getDesName(r.designerId)[0]}</span>&nbsp;`}
+        ${getDesName(r.designerId)}
+      </td>
+      <td><strong>${r.customerName}</strong>${r.isWalkin?'<span class="walkin-badge">워크인</span>':''}</td>
+      <td>${r.time}</td>
+      <td style="max-width:140px">${r.service}</td>
+      <td>${statusBadge(r.checkinStatus)}</td>
+      <td>
+        <select onchange="changeStatus(${r.id},this.value)" style="font-size:12px;padding:4px 8px;border-radius:6px;border:1.5px solid var(--gray-200);font-family:'Noto Sans KR',sans-serif;cursor:pointer">
+          <option value="waiting" ${r.checkinStatus==='waiting'?'selected':''}>대기중</option>
+          <option value="inprogress" ${r.checkinStatus==='inprogress'?'selected':''}>시술중</option>
+          <option value="done" ${r.checkinStatus==='done'?'selected':''}>완료</option>
+        </select>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function changeStatus(id,val){
+  const r=DB.reservations.find(x=>x.id===id);
+  if(r){r.checkinStatus=val;}
+  renderStats();renderCheckinTable();
+}
+
+function getDateLabel(date){
+  if(!date) return '';
+  const days = ['일','월','화','수','목','금','토'];
+  const d = new Date(date);
+  const day = days[d.getDay()];
+  const [y,m,dd] = date.split('-');
+  return `${m}/${dd}(${day})`;
+}
+
+function renderResTable(){
+  const tbody=document.getElementById('resTbody');tbody.innerHTML='';
+  DB.reservations.forEach(r=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td><input type="checkbox" class="res-chk" value="${r.id}" onchange="updateBulkDeleteBtn()"></td>
+      <td>${getDateLabel(r.date)}</td>
+      <td><strong>${r.time}</strong></td>
+      <td>${r.customerName}</td>
+      <td>${r.phone}</td>
+      <td>${getDesName(r.designerId)}</td>
+      <td>${r.service}</td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="action-btn" onclick="openResModal(${r.id})">수정</button>
+        <button class="action-btn danger" onclick="deleteRes(${r.id})">삭제</button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+  updateBulkDeleteBtn();
+}
+
+function toggleSelectAll(cb){
+  document.querySelectorAll('.res-chk').forEach(c=>{ c.checked = cb.checked; });
+  updateBulkDeleteBtn();
+}
+
+function updateBulkDeleteBtn(){
+  const checked = document.querySelectorAll('.res-chk:checked').length;
+  const btn = document.getElementById('bulkDeleteBtn');
+  if(!btn) return;
+  if(checked > 0){
+    btn.style.display = 'block';
+    btn.textContent = `선택 삭제 (${checked}건)`;
+  } else {
+    btn.style.display = 'none';
+  }
+  // 전체선택 체크박스 상태 업데이트
+  const total = document.querySelectorAll('.res-chk').length;
+  const selectAll = document.getElementById('selectAllRes');
+  if(selectAll) selectAll.checked = (checked === total && total > 0);
+}
+
+function bulkDeleteRes(){
+  const checkedIds = [...document.querySelectorAll('.res-chk:checked')].map(c=>parseInt(c.value));
+  if(!checkedIds.length) return;
+  showConfirm('예약 일괄 삭제', `선택한 ${checkedIds.length}건의 예약을 삭제할까요?`, '삭제하기', ()=>{
+    DB.reservations = DB.reservations.filter(r=>!checkedIds.includes(r.id));
+    saveDB();
+    renderResTable(); renderStats(); renderCheckinTable();
+    const selectAll = document.getElementById('selectAllRes');
+    if(selectAll) selectAll.checked = false;
+  });
+}
+
+function renderDesignerCards(){
+  const wrap=document.getElementById('designerCards');wrap.innerHTML='';
+  DB.designers.forEach((d, idx)=>{
+    const card=document.createElement('div');
+    card.className='designer-mgmt-card draggable';
+    card.draggable = true;
+    card.dataset.id = d.id;
+    const photoHtml = d.photo
+      ? `<img class="dm-photo" src="${d.photo}" alt="${d.name}">`
+      : `<div class="dm-ph">${d.name[0]}</div>`;
+    card.innerHTML=`
+      <div class="dm-drag-handle" title="드래그해서 순서 변경">⠿</div>
+      ${photoHtml}
+      <div class="dm-name">${d.name}</div>
+      <div class="dm-role">${d.role}</div>
+      <div class="dm-actions">
+        <button class="dm-btn edit" onclick="openDesModal(${d.id})">수정</button>
+        <button class="dm-btn del" onclick="deleteDes(${d.id})">삭제</button>
+      </div>`;
+
+    // 드래그 이벤트
+    card.addEventListener('dragstart', e=>{
+      e.dataTransfer.setData('text/plain', d.id);
+      card.classList.add('dragging');
+    });
+    card.addEventListener('dragend', ()=>{
+      card.classList.remove('dragging');
+      document.querySelectorAll('.designer-mgmt-card').forEach(c=>c.classList.remove('drag-over'));
+    });
+    card.addEventListener('dragover', e=>{
+      e.preventDefault();
+      card.classList.add('drag-over');
+    });
+    card.addEventListener('dragleave', ()=>{
+      card.classList.remove('drag-over');
+    });
+    card.addEventListener('drop', e=>{
+      e.preventDefault();
+      card.classList.remove('drag-over');
+      const fromId = parseInt(e.dataTransfer.getData('text/plain'));
+      const toId = d.id;
+      if(fromId === toId) return;
+      const fromIdx = DB.designers.findIndex(x=>x.id===fromId);
+      const toIdx = DB.designers.findIndex(x=>x.id===toId);
+      const [moved] = DB.designers.splice(fromIdx, 1);
+      DB.designers.splice(toIdx, 0, moved);
+      saveDB();
+      renderDesignerCards();
+    });
+
+    wrap.appendChild(card);
+  });
+  // Add card
+  const addCard=document.createElement('div');addCard.className='add-designer-card';
+  addCard.innerHTML=`<div class="add-icon">＋</div><span>디자이너 추가</span>`;
+  addCard.onclick=()=>openDesModal(null);
+  wrap.appendChild(addCard);
+}
+
+// ══════════════════════════════
+// MODALS
+// ══════════════════════════════
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
+
+// ── 커스텀 confirm 모달 ──
+let _confirmCallback = null;
+function showConfirm(title, msg, okLabel, cb){
+  document.getElementById('confirmTitle').textContent = title;
+  document.getElementById('confirmMsg').textContent   = msg;
+  document.getElementById('confirmOkBtn').textContent = okLabel || '삭제하기';
+  _confirmCallback = cb;
+  openModal('confirmModal');
+}
+function confirmOk(){
+  closeModal('confirmModal');
+  if(_confirmCallback) _confirmCallback();
+  _confirmCallback = null;
+}
+
+let editResId=null;
+function openResModal(id=null){
+  editResId=id;
+  document.getElementById('resModalTitle').textContent=id?'예약 수정':'예약 추가';
+  // populate designer select
+  const sel=document.getElementById('rm-designer');sel.innerHTML='';
+  DB.designers.forEach(d=>{const opt=document.createElement('option');opt.value=d.id;opt.textContent=d.name+' ('+d.role+')';sel.appendChild(opt);});
+  if(id){
+    const r=DB.reservations.find(x=>x.id===id);
+    document.getElementById('rm-name').value=r.customerName;
+    document.getElementById('rm-phone').value=r.phone;
+    document.getElementById('rm-date').value=r.date||'';
+    document.getElementById('rm-time').value=r.time;
+    document.getElementById('rm-designer').value=r.designerId;
+    document.getElementById('rm-service').value=r.service;
+  } else {
+    document.getElementById('rm-name').value='';
+    document.getElementById('rm-phone').value='';
+    document.getElementById('rm-date').value=new Date().toISOString().split('T')[0];
+    document.getElementById('rm-time').value='';
+    document.getElementById('rm-service').value='';
+  }
+  openModal('resModal');
+}
+
+function saveReservation(){
+  const name=document.getElementById('rm-name').value.trim();
+  const phone=document.getElementById('rm-phone').value.trim();
+  const date=document.getElementById('rm-date').value;
+  const time=document.getElementById('rm-time').value;
+  const desId=parseInt(document.getElementById('rm-designer').value);
+  const service=document.getElementById('rm-service').value.trim();
+  if(!name||!phone||!date||!time||!service){alert('모든 항목을 입력해 주세요.');return;}
+
+  // 중복 예약 체크 (같은 디자이너 + 같은 날짜 + 같은 시간)
+  const duplicate = DB.reservations.find(r=>
+    r.designerId === desId &&
+    r.date === date &&
+    r.time === time &&
+    r.id !== editResId
+  );
+  if(duplicate){
+    showConfirm(
+      '중복 예약 확인',
+      `${getDesName(desId)} 선생님의 ${date} ${time} 에 이미 "${duplicate.customerName}" 고객 예약이 있어요. 그래도 추가할까요?`,
+      '추가하기',
+      ()=>{ _doSaveReservation(name,phone,date,time,desId,service); }
+    );
+    return;
+  }
+  _doSaveReservation(name,phone,date,time,desId,service);
+}
+
+function _doSaveReservation(name,phone,date,time,desId,service){
+  if(editResId){
+    const r=DB.reservations.find(x=>x.id===editResId);
+    if(r){Object.assign(r,{customerName:name,phone,date,time,designerId:desId,service});}
+  } else {
+    DB.reservations.push({id:DB.nextId++,customerName:name,phone,date,time,designerId:desId,service,checkinStatus:null,seat:null,request:''});
+  }
+  saveDB();
+  closeModal('resModal');renderResTable();renderStats();renderCheckinTable();
+}
+
+function deleteRes(id){
+  showConfirm('예약 삭제', '이 예약을 삭제할까요?', '삭제하기', ()=>{
+    DB.reservations=DB.reservations.filter(x=>x.id!==id);
+    renderResTable();renderStats();renderCheckinTable();
+  });
+}
+
+let editDesId=null;
+let editDesPhoto=null;
+function openDesModal(id=null){
+  editDesId=id;editDesPhoto=null;
+  document.getElementById('desModalTitle').textContent=id?'디자이너 수정':'디자이너 추가';
+  document.getElementById('photoFile').value='';
+  document.getElementById('photoPreviewWrap').innerHTML=`<div class="photo-upload-placeholder">📷</div><div class="photo-upload-label">프로필 사진 업로드<br><small style="color:var(--gray-400)">JPG, PNG 권장</small></div>`;
+  if(id){
+    const d=DB.designers.find(x=>x.id===id);
+    document.getElementById('dm-name').value=d.name;
+    document.getElementById('dm-role').value=d.role;
+    document.getElementById('dm-phone').value=d.phone||'';
+    document.getElementById('dm-slack').value=d.slackUrl||'';
+    if(d.photo){
+      editDesPhoto=d.photo;
+      document.getElementById('photoPreviewWrap').innerHTML=`<img class="photo-preview" src="${d.photo}" alt="프로필">`;
+    }
+  } else {
+    document.getElementById('dm-name').value='';
+    document.getElementById('dm-phone').value='';
+    document.getElementById('dm-slack').value='';
+  }
+  openModal('desModal');
+}
+
+function previewPhoto(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    editDesPhoto=ev.target.result;
+    document.getElementById('photoPreviewWrap').innerHTML=`<img class="photo-preview" src="${ev.target.result}" alt="프로필">`;
+  };
+  reader.readAsDataURL(file);
+}
+
+function saveDesigner(){
+  const name=document.getElementById('dm-name').value.trim();
+  const role=document.getElementById('dm-role').value;
+  const phone=document.getElementById('dm-phone').value.trim();
+  const slackUrl=document.getElementById('dm-slack').value.trim();
+  if(!name){alert('이름을 입력해 주세요.');return;}
+  if(editDesId){
+    const d=DB.designers.find(x=>x.id===editDesId);
+    if(d){Object.assign(d,{name,role,phone,slackUrl,photo:editDesPhoto||d.photo});}
+  } else {
+    DB.designers.push({id:DB.nextDesId++,name,role,phone,slackUrl,photo:editDesPhoto||null});
+  }
+  closeModal('desModal');renderDesignerCards();renderSlackSettings();
+  saveDB();
+}
+
+function deleteDes(id){
+  const d = DB.designers.find(x=>x.id===id);
+  if(!d) return;
+  showConfirm('디자이너 삭제', `${d.name}을(를) 삭제할까요?`, '삭제하기', ()=>{
+    DB.designers=DB.designers.filter(x=>x.id!==id);
+    renderDesignerCards();
+    renderSlackSettings();
+    saveDB();
+  });
+}
+
+// ══════════════════════════════
+// MENU MANAGEMENT
+// ══════════════════════════════
+let menuEditTarget = null; // {type, id} or {type, id:null} for new
+
+function renderMenus(){
+  renderMenuList('service', 'serviceMenuList');
+  renderMenuList('drink',   'drinkMenuList');
+  renderMenuList('gown',    'gownMenuList');
+}
+
+function getMenuArray(type){
+  if(type==='service') return DB.services;
+  if(type==='drink')   return DB.drinks;
+  if(type==='gown')    return DB.gowns;
+  return [];
+}
+
+function renderMenuList(type, containerId){
+  const wrap = document.getElementById(containerId);
+  if(!wrap) return;
+  wrap.innerHTML = '';
+  const arr = getMenuArray(type);
+  if(!arr.length){
+    wrap.innerHTML = `<div style="color:var(--gray-400);font-size:13px;padding:12px 0">항목이 없습니다. + 항목 추가를 눌러 추가하세요.</div>`;
+    return;
+  }
+  arr.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'menu-item-row';
+    row.draggable = true;
+    row.dataset.id = item.id;
+    row.innerHTML = `
+      <span style="cursor:grab;color:var(--gray-400);font-size:18px;margin-right:4px">⠿</span>
+      <span class="mir-emoji">${item.emoji}</span>
+      <span class="mir-label">${item.label}</span>
+      <div class="mir-actions">
+        <button class="action-btn" onclick="openMenuModal('${type}', ${item.id})">수정</button>
+        <button class="action-btn danger" onclick="deleteMenuItem('${type}', ${item.id})">삭제</button>
+      </div>`;
+
+    // 드래그 이벤트
+    row.addEventListener('dragstart', e=>{
+      e.dataTransfer.setData('text/plain', item.id);
+      row.style.opacity = '0.4';
+    });
+    row.addEventListener('dragend', ()=>{
+      row.style.opacity = '1';
+      wrap.querySelectorAll('.menu-item-row').forEach(r=>r.classList.remove('drag-over'));
+    });
+    row.addEventListener('dragover', e=>{
+      e.preventDefault();
+      row.classList.add('drag-over');
+    });
+    row.addEventListener('dragleave', ()=>{
+      row.classList.remove('drag-over');
+    });
+    row.addEventListener('drop', e=>{
+      e.preventDefault();
+      row.classList.remove('drag-over');
+      const fromId = parseInt(e.dataTransfer.getData('text/plain'));
+      const toId = item.id;
+      if(fromId === toId) return;
+      const arr2 = getMenuArray(type);
+      const fromIdx = arr2.findIndex(x=>x.id===fromId);
+      const toIdx   = arr2.findIndex(x=>x.id===toId);
+      const [moved] = arr2.splice(fromIdx, 1);
+      arr2.splice(toIdx, 0, moved);
+      saveDB();
+      renderMenus();
+    });
+
+    wrap.appendChild(row);
+  });
+}
+
+function openMenuModal(type, id = null){
+  menuEditTarget = {type, id};
+  const typeLabel = type==='service'?'시술':type==='drink'?'음료':'가운';
+  document.getElementById('menuModalTitle').textContent = id ? `${typeLabel} 항목 수정` : `${typeLabel} 항목 추가`;
+  if(id){
+    const item = getMenuArray(type).find(x=>x.id===id);
+    if(item){
+      document.getElementById('mm-emoji').value = item.emoji;
+      document.getElementById('mm-label').value = item.label;
+    }
+  } else {
+    document.getElementById('mm-emoji').value = '';
+    document.getElementById('mm-label').value = '';
+  }
+  openModal('menuModal');
+}
+
+function saveMenuItem(){
+  const emoji = document.getElementById('mm-emoji').value.trim() || '•';
+  const label = document.getElementById('mm-label').value.trim();
+  if(!label){ alert('항목 이름을 입력해 주세요.'); return; }
+  const arr = getMenuArray(menuEditTarget.type);
+  if(menuEditTarget.id){
+    const item = arr.find(x=>x.id===menuEditTarget.id);
+    if(item){ item.emoji = emoji; item.label = label; }
+  } else {
+    arr.push({id: DB.nextMenuId++, emoji, label});
+  }
+  closeModal('menuModal');
+  renderMenus();
+  saveDB();
+}
+
+function deleteMenuItem(type, id){
+  const arr = getMenuArray(type);
+  const item = arr.find(x=>x.id===id);
+  if(!item) return;
+  const typeLabel = type==='service'?'시술 메뉴':type==='drink'?'음료':'가운';
+  showConfirm(`${typeLabel} 삭제`, `"${item.label}" 항목을 삭제할까요?`, '삭제하기', ()=>{
+    if(type==='service') DB.services = DB.services.filter(x=>x.id!==id);
+    if(type==='drink')   DB.drinks   = DB.drinks.filter(x=>x.id!==id);
+    if(type==='gown')    DB.gowns    = DB.gowns.filter(x=>x.id!==id);
+    renderMenus();
+    saveDB();
+  });
+}
+
+// ══════════════════════════════
+// SLACK NOTIFICATIONS
+// ══════════════════════════════
+
+function renderSlackSettings(){
+  // 전체 URL 채우기
+  const globalInput = document.getElementById('slackGlobalUrl');
+  if(globalInput) globalInput.value = DB.slackGlobalUrl || '';
+
+  // 디자이너별 리스트
+  const wrap = document.getElementById('slackDesignerList');
+  if(!wrap) return;
+  wrap.innerHTML = '';
+  DB.designers.forEach(d => {
+    const hasUrl = !!(d.slackUrl && d.slackUrl.trim());
+    const row = document.createElement('div');
+    row.className = 'slack-des-row';
+    row.innerHTML = `
+      <div style="width:36px;height:36px;border-radius:50%;background:var(--accent-light);
+        display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;
+        color:var(--accent);flex-shrink:0">${d.name[0]}</div>
+      <div class="slack-des-info">
+        <div class="slack-des-name">${d.name} <span style="font-size:11px;color:var(--gray-400);font-weight:400">${d.role}</span></div>
+        <div class="slack-des-url ${hasUrl?'set':'unset'}">${hasUrl ? '✅ URL 등록됨' : '⚪ URL 미등록 (전체 채널로 발송)'}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button class="action-btn" onclick="openSlackDesModal(${d.id})">설정</button>
+        ${hasUrl?`<button class="action-btn" onclick="testSlack('designer',${d.id})" style="color:var(--green);border-color:var(--green)">테스트</button>`:''}
+      </div>`;
+    wrap.appendChild(row);
+  });
+}
+
+function saveSlackGlobal(){
+  const url = document.getElementById('slackGlobalUrl').value.trim();
+  DB.slackGlobalUrl = url;
+  saveDB();
+  const st = document.getElementById('slackGlobalStatus');
+  st.style.display = 'block';
+  st.className = 'slack-status-ok';
+  st.textContent = '✅ 저장되었습니다.';
+  setTimeout(()=>{ st.style.display='none'; }, 2500);
+  renderSlackSettings();
+}
+
+// 디자이너 슬랙 URL 설정 모달
+let _slackDesEditId = null;
+function openSlackDesModal(desId){
+  const d = DB.designers.find(x=>x.id===desId);
+  if(!d) return;
+  _slackDesEditId = desId;
+  document.getElementById('slackDesModalTitle').textContent = `${d.name} — 슬랙 채널 설정`;
+  document.getElementById('sdm-url').value = d.slackUrl || '';
+  openModal('slackDesModal');
+}
+function saveSlackDesUrl(){
+  if(_slackDesEditId === null) return;
+  const d = DB.designers.find(x=>x.id===_slackDesEditId);
+  if(d) d.slackUrl = document.getElementById('sdm-url').value.trim();
+  closeModal('slackDesModal');
+  renderSlackSettings();
+  renderDesignerCards();
+  saveDB();
+  _slackDesEditId = null;
+}
+
+async function sendSlackMessage(webhookUrl, payload){
+  try {
+    const res = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return true;
+  } catch(e) {
+    console.warn('Slack send failed:', e);
+    return false;
+  }
+}
+
+function buildSlackPayload(info){
+  const now = new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+  // 슬랙 Incoming Webhook은 text 필드로 메시지 전송
+  const text = [
+    `💈 *새 고객 체크인!*`,
+    `👤 고객명: *${info.customerName}*`,
+    `✂️ 담당: ${info.desName} (${info.desRole})`,
+    `🕐 시간: ${info.time}  |  ${info.visitType}`,
+    `💇 시술: ${info.service}`,
+    `☕ 음료: ${info.drink}  |  🥼 가운: ${info.gown}`,
+    info.request ? `💬 요청사항: ${info.request}` : null,
+    `🕒 체크인 시각: ${now}`,
+  ].filter(Boolean).join('\n');
+
+  return { text, desName: info.desName };
+}
+
+async function sendSlackCheckin(info){
+  const payload = buildSlackPayload(info);
+  // 디자이너 개별 URL 우선, 없으면 전체 채널
+  const targetUrl = (info.desSlackUrl && info.desSlackUrl.trim())
+    ? info.desSlackUrl.trim()
+    : DB.slackGlobalUrl;
+
+  const badge = document.getElementById('slackResultBadge');
+  if(!targetUrl){
+    if(badge){ badge.style.display='flex'; badge.className='notify-badge'; badge.innerHTML='🔕&nbsp;&nbsp;슬랙 URL이 설정되지 않아 알림을 보내지 않았어요.'; }
+    return;
+  }
+
+  if(badge){ badge.style.display='flex'; badge.className='notify-badge'; badge.innerHTML='📨&nbsp;&nbsp;슬랙 알림 발송 중...'; }
+
+  const ok = await sendSlackMessage(targetUrl, payload);
+
+  if(badge){
+    if(ok){
+      badge.style.background='#ECFDF5'; badge.style.borderColor='#6EE7B7'; badge.style.color='#065F46';
+      badge.innerHTML=`✅&nbsp;&nbsp;<strong>${info.desName}</strong>에게 슬랙 알림을 보냈어요!`;
+    } else {
+      badge.style.background='#FEF2F2'; badge.style.borderColor='#FECACA'; badge.style.color='#991B1B';
+      badge.innerHTML='❌&nbsp;&nbsp;슬랙 발송에 실패했어요. Webhook URL을 확인해 주세요.';
+    }
+  }
+}
+
+async function testSlack(mode, desId=null){
+  let url = '';
+  let statusElId = '';
+  if(mode === 'global'){
+    url = document.getElementById('slackGlobalUrl').value.trim();
+    statusElId = 'slackGlobalStatus';
+    if(!url){ alert('먼저 Webhook URL을 입력하고 저장하세요.'); return; }
+  } else {
+    const d = DB.designers.find(x=>x.id===desId);
+    url = d ? d.slackUrl : '';
+    if(!url){ alert('이 디자이너의 Webhook URL이 등록되지 않았습니다.'); return; }
+  }
+
+  const payload = buildSlackPayload({
+    customerName: '테스트 고객',
+    desName: mode==='global' ? '전체채널' : (DB.designers.find(x=>x.id===desId)||{}).name||'',
+    desRole: '테스트',
+    visitType: '예약 방문',
+    time: '14:00',
+    service: '커트',
+    drink: '아메리카노',
+    gown: '일반 가운',
+    request: '이것은 테스트 메시지입니다 ✅',
+  });
+
+  const ok = await sendSlackMessage(url, payload);
+
+  if(statusElId){
+    const st = document.getElementById(statusElId);
+    if(st){
+      st.style.display = 'block';
+      if(ok){
+        st.className = 'slack-status-ok';
+        st.textContent = '✅ 테스트 메시지 발송 완료! 슬랙을 확인해 주세요.';
+      } else {
+        st.className = 'slack-status-err';
+        st.textContent = '❌ 발송 실패 — Webhook URL을 확인해 주세요.';
+      }
+      setTimeout(()=>{ st.style.display='none'; }, 5000);
+    }
+  }
+}
+
+</script>
+
+<!-- Firebase 실시간 동기화 -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCkl-68aIrcGHpwRUC81xrx51uh4Kq6IPo",
+  authDomain: "hair-checkin.firebaseapp.com",
+  projectId: "hair-checkin",
+  storageBucket: "hair-checkin.firebasestorage.app",
+  messagingSenderId: "718954098977",
+  appId: "1:718954098977:web:ff79a39feb1288e3e54e60"
+};
+
+const app = initializeApp(firebaseConfig);
+const fsdb = getFirestore(app);
+const DATA_DOC = doc(fsdb, 'hairCheckin', 'data');
+
+// Firebase 저장 함수 등록
+window._firebaseSaveDB = async function(){
+  try {
+    await setDoc(DATA_DOC, {
+      designers:      DB.designers,
+      services:       DB.services,
+      drinks:         DB.drinks,
+      gowns:          DB.gowns,
+      reservations:   DB.reservations,
+      nextId:         DB.nextId,
+      nextDesId:      DB.nextDesId,
+      nextMenuId:     DB.nextMenuId,
+      slackGlobalUrl: DB.slackGlobalUrl,
+      adminPassword:  DB.adminPassword,
+      updatedAt:      window._lastSaveTime,
+    });
+    console.log('✅ Firestore 저장 완료');
+  } catch(e){
+    console.warn('Firestore 저장 실패:', e);
+  }
+};
+
+// Firebase에서 데이터 로드
+async function loadFromFirebase(){
+  try {
+    const snap = await getDoc(DATA_DOC);
+    if(snap.exists()){
+      const d = snap.data();
+      if(d.designers)      DB.designers      = d.designers;
+      if(d.services)       DB.services       = d.services;
+      if(d.drinks)         DB.drinks         = d.drinks;
+      if(d.gowns)          DB.gowns          = d.gowns;
+      if(d.reservations)   DB.reservations   = d.reservations;
+      if(d.nextId)         DB.nextId         = d.nextId;
+      if(d.nextDesId)      DB.nextDesId      = d.nextDesId;
+      if(d.nextMenuId)     DB.nextMenuId     = d.nextMenuId;
+      if(d.slackGlobalUrl !== undefined) DB.slackGlobalUrl = d.slackGlobalUrl;
+      if(d.adminPassword  !== undefined) DB.adminPassword  = d.adminPassword;
+      // 관리자 화면 갱신
+      const adminPage = document.getElementById('page-admin');
+      if(adminPage && adminPage.classList.contains('active')) renderAdmin();
+    } else {
+      await window._firebaseSaveDB();
+      console.log('✅ Firebase 초기 데이터 저장 완료');
+    }
+  } catch(e){
+    console.warn('Firebase 로드 실패 (localStorage 사용):', e);
+  }
+}
+
+// 실시간 동기화
+onSnapshot(DATA_DOC, (snap)=>{
+  if(!snap.exists()) return;
+  const d = snap.data();
+  if(d.updatedAt && d.updatedAt > window._lastSaveTime){
+    if(d.designers)      DB.designers      = d.designers;
+    if(d.services)       DB.services       = d.services;
+    if(d.drinks)         DB.drinks         = d.drinks;
+    if(d.gowns)          DB.gowns          = d.gowns;
+    if(d.reservations)   DB.reservations   = d.reservations;
+    if(d.nextId)         DB.nextId         = d.nextId;
+    if(d.slackGlobalUrl !== undefined) DB.slackGlobalUrl = d.slackGlobalUrl;
+    const adminPage = document.getElementById('page-admin');
+    if(adminPage && adminPage.classList.contains('active')) renderAdmin();
+    console.log('🔄 실시간 동기화 완료');
+  }
+});
+
+// 시작
+window._lastSaveTime = 0;
+loadFromFirebase();
+</script>
+</body>
+</html>
