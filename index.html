@@ -1499,7 +1499,10 @@ function buildTimeGrid(){
   CI.time = '';
 
   const bookedTimes = DB.reservations
-    .filter(r => r.designerId === CI.designerId)
+    const today = new Date().toISOString().split('T')[0];
+const bookedTimes = DB.reservations
+    .filter(r => r.designerId === CI.designerId && (!r.date || r.date === today))
+    .map(r => r.time);
     .map(r => r.time);
 
   const times = [];
