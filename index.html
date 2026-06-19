@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maison de ID Hair - 셀프 체크인</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif; background: #fff; color: #000; }
+.header { padding: 16px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; background: #fff; }
+.header h1 { font-size: 18px; font-weight: 700; }
+.mode-buttons { display: flex; gap: 10px; }
+.mode-buttons button { padding: 8px 16px; border: 1.5px solid #ddd; background: transparent; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; font-family: 'Noto Sans KR', sans-serif; transition: all 0.2s; }
+.mode-buttons button.active { background: #000; color: #fff; border-color: #000; }
+.mode-buttons button:hover { border-color: #999; }
+
+.page { display: none; padding: 20px; max-width: 600px; margin: 0 auto; }
+.page.active { display: block; }
+
+/* 환영 화면 */
+.welcome { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #000; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
+.welcome.hidden { display: none; }
+.welcome-content { text-align: center; max-width: 400px; }
+.welcome-brand { font-size: 24px; font-weight: 700; margin-bottom: 8px; letter-spacing: 2px; }
+.welcome-branch { font-size: 12px; color: rgba(255,255,255,0.6); letter-spacing: 1px; margin-bottom: 20px; }
+.welcome-msg { font-size: 28px; font-weight: 700; margin-bottom: 12px; }
+.welcome-desc { font-size: 14px; line-height: 1.7; color: rgba(255,255,255,0.7); margin-bottom: 40px; }
+.welcome-btn { background: #B8966E; color: #fff; border: none; padding: 16px 40px; border-radius: 8px; font-size: 16px; font-weight: 700; cursor: pointer; font-family: 'Noto Sans KR', sans-serif; transition: background 0.2s; }
+.welcome-btn:hover { background: #9A7A56; }
+
+/* 체크인 화면 */
+.step-indicator { display: flex; gap: 0; margin-bottom: 30px; padding: 0 0 20px; border-bottom: 1px solid #eee; }
+.step { flex: 1; text-align: center; position: relative; }
+.step:not(:last-child)::after { content: ''; position: absolute; top: 12px; left: 50%; width: 100%; height: 2px; background: #eee; z-index: 0; }
+.step.done:not(:last-child)::after { background: #B8966E; }
+.step-dot { width: 24px; height: 24px; border-radius: 50%; border: 2px solid #ddd; background: #fff; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; font-size: 11px; font-weight: 600; position: relative; z-index: 1; transition: all 0.2s; }
+.step.active .step-dot { border-color: #B8966E; background: #B8966E; color: #fff; }
+.step.done .step-dot { border-color: #B8966E; background: #B8966E; color: #fff; }
+.step-label { font-size: 11px; font-weight: 600; color: #999; }
+.step.active .step-label, .step.done .step-label { color: #B8966E; }
+
+.screen { display: none; }
+.screen.active { display: block; animation: fadeIn 0.3s ease; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.screen h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+.screen p { font-size: 14px; color: #666; margin-bottom: 20px; line-height: 1.6; }
+
+.field { margin-bottom: 16px; }
+.field label { display: block; font-size: 12px; font-weight: 600; color: #666; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px; }
+.field input { width: 100%; padding: 12px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 15px; font-family: 'Noto Sans KR', sans-serif; outline: none; }
+.field input:focus { border-color: #B8966E; }
+
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+.card { border: 1.5px solid #ddd; border-radius: 8px; padding: 16px 8px; text-align: center; cursor: pointer; transition: all 0.2s; background: #fff; }
+.card:hover { border-color: #B8966E; background: #FBF6F0; }
+.card.selected { border-color: #B8966E; background: #B8966E; color: #fff; }
+.card-icon { font-size: 28px; margin-bottom: 8px; }
+.card-label { font-size: 13px; font-weight: 600; }
+
+.grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; }
+.card-temp { border: 1.5px solid #ddd; border-radius: 8px; padding: 14px; text-align: center; cursor: pointer; transition: all 0.2s; }
+.card-temp:hover { border-color: #B8966E; background: #FBF6F0; }
+.card-temp.selected { border-color: #B8966E; background: #B8966E; color: #fff; }
+.temp-icon { font-size: 32px; margin-bottom: 8px; }
+.temp-label { font-size: 13px; font-weight: 600; }
+
+.checkbox-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+.checkbox-item { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1.5px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+.checkbox-item:hover { border-color: #B8966E; }
+.checkbox-item input { width: 18px; height: 18px; cursor: pointer; accent-color: #B8966E; }
+.checkbox-item label { flex: 1; cursor: pointer; font-size: 14px; }
+
+.summary { background: #f9f9f9; border-radius: 8px; padding: 16px; margin-bottom: 20px; }
+.summary-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; }
+.summary-row:last-child { border-bottom: none; }
+.summary-key { font-weight: 600; color: #999; }
+.summary-val { font-weight: 600; }
+
+.success-screen { text-align: center; padding: 40px 20px; }
+.success-icon { font-size: 60px; margin-bottom: 20px; }
+.success-title { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+.success-desc { font-size: 14px; color: #666; margin-bottom: 20px; line-height: 1.6; }
+.countdown { font-size: 13px; color: #999; margin-top: 20px; }
+.countdown span { font-weight: 700; color: #B8966E; }
+
+.buttons { display: flex; gap: 10px; margin-top: 20px; }
+.btn { flex: 1; padding: 14px; border: none; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; font-family: 'Noto Sans KR', sans-serif; transition: all 0.2s; }
+.btn-primary { background: #000; color: #fff; }
+.btn-primary:hover { background: #333; }
+.btn-ghost { background: transparent; border: 1.5px solid #ddd; color: #000; }
+.btn-ghost:hover { border-color: #999; }
+
+/* 관리자 페이지 */
+.admin-tabs { display: flex; gap: 0; border-bottom: 2px solid #ddd; margin-bottom: 20px; }
+.admin-tab { padding: 12px 20px; cursor: pointer; font-size: 14px; font-weight: 600; color: #999; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.2s; background: none; border: none; font-family: 'Noto Sans KR', sans-serif; }
+.admin-tab.active { color: #000; border-bottom-color: #000; }
+
+.admin-panel { display: none; }
+.admin-panel.active { display: block; }
+
+.panel-title { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+.panel-desc { font-size: 12px; color: #666; margin-bottom: 16px; }
+
+.card-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.admin-card { border: 1.5px solid #ddd; border-radius: 8px; padding: 16px; text-align: center; }
+.admin-card-avatar { width: 60px; height: 60px; border-radius: 50%; background: #EAD9C3; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; color: #B8966E; overflow: hidden; }
+.admin-card-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.admin-card-name { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+.admin-card-role { font-size: 12px; color: #999; margin-bottom: 10px; }
+.admin-card-actions { display: flex; gap: 6px; }
+.admin-card-actions button { flex: 1; padding: 6px; font-size: 12px; border: 1.5px solid #ddd; background: transparent; border-radius: 6px; cursor: pointer; transition: all 0.2s; font-family: 'Noto Sans KR', sans-serif; }
+.admin-card-actions button:hover { border-color: #B8966E; color: #B8966E; }
+
+.menu-list { display: flex; flex-direction: column; gap: 8px; }
+.menu-item { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1.5px solid #ddd; border-radius: 8px; background: #f9f9f9; }
+.menu-emoji { font-size: 20px; width: 30px; text-align: center; flex-shrink: 0; }
+.menu-label { flex: 1; font-size: 14px; font-weight: 600; }
+.menu-temp { font-size: 11px; color: #999; }
+.menu-actions { display: flex; gap: 6px; }
+.menu-actions button { padding: 6px 10px; font-size: 12px; border: 1.5px solid #ddd; background: transparent; border-radius: 6px; cursor: pointer; transition: all 0.2s; font-family: 'Noto Sans KR', sans-serif; }
+.menu-actions button:hover { border-color: #B8966E; color: #B8966E; }
+
+.modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center; padding: 20px; }
+.modal.open { display: flex; }
+.modal-content { background: #fff; border-radius: 12px; padding: 24px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; }
+.modal-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+.modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: #999; }
+.modal-buttons { display: flex; gap: 10px; margin-top: 20px; }
+.modal-buttons button { flex: 1; padding: 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: 'Noto Sans KR', sans-serif; }
+.modal-buttons .btn-cancel { background: transparent; border: 1.5px solid #ddd; color: #000; }
+.modal-buttons .btn-save { background: #000; color: #fff; }
+
+.qr-section { text-align: center; }
+.qr-display { display: inline-block; background: white; padding: 12px; border-radius: 8px; border: 1.5px solid #ddd; margin-bottom: 16px; }
+.qr-url { font-size: 11px; color: #999; word-break: break-all; margin-bottom: 12px; }
+
+.alert { padding: 12px; border-radius: 8px; font-size: 12px; margin-bottom: 12px; }
+.alert-success { background: #ECFDF5; color: #065F46; border: 1px solid #A7F3D0; }
+.alert-error { background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA; }
+
+@media (max-width: 500px) {
+  .grid-3 { grid-template-columns: repeat(2, 1fr); }
+  .header { flex-direction: column; gap: 10px; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>메종드아이디헤어</h1>
+  <div class="mode-buttons">
+    <button class="mode-btn active" data-page="checkin">체크인</button>
+    <button class="mode-btn" id="adminBtn" data-page="admin">관리자</button>
+  </div>
+</div>
+
+<!-- 환영 화면 -->
+<div class="welcome active" id="welcomeScreen">
+  <div class="welcome-content">
+    <div class="welcome-brand">메종드아이디헤어</div>
+    <div class="welcome-branch">반포자이점</div>
+    <div class="welcome-msg">환영합니다 🙏</div>
+    <div class="welcome-desc">방문해 주셔서 감사합니다.<br>편하신 서비스를 위해 체크인 부탁드립니다.</div>
+    <button class="welcome-btn" id="startBtn">체크인 시작</button>
+  </div>
+</div>
+
+<!-- 체크인 페이지 -->
+<div class="page active" id="checkinPage">
+  <div class="step-indicator" id="stepIndicator" style="display:none">
+    <div class="step" data-step="1"><div class="step-dot">1</div><div class="step-label">정보</div></div>
+    <div class="step" data-step="2"><div class="step-dot">2</div><div class="step-label">선생님</div></div>
+    <div class="step" data-step="3"><div class="step-dot">3</div><div class="step-label">음료</div></div>
+    <div class="step" data-step="4"><div class="step-dot">4</div><div class="step-label">요청</div></div>
+    <div class="step" data-step="5"><div class="step-dot">5</div><div class="step-label">확인</div></div>
+  </div>
+
+  <!-- Screen 1: 정보 입력 -->
+  <div class="screen active" id="screen1">
+    <h2>고객 정보 입력</h2>
+    <p>성함과 전화번호를 입력해 주세요.</p>
+    <div class="field"><label>성함</label><input type="text" id="nameInput" placeholder="홍길동"/></div>
+    <div class="field"><label>전화번호</label><input type="tel" id="phoneInput" placeholder="010-0000-0000"/></div>
+    <div class="buttons"><button class="btn btn-primary" onclick="goScreen(2)">다음으로</button></div>
+  </div>
+
+  <!-- Screen 2: 디자이너 선택 -->
+  <div class="screen" id="screen2">
+    <h2>담당 선생님 선택 ✂️</h2>
+    <p>담당 선생님을 선택해 주세요.</p>
+    <div class="grid-3" id="designerGrid"></div>
+    <div class="buttons"><button class="btn btn-ghost" onclick="goScreen(1)">← 이전</button></div>
+  </div>
+
+  <!-- Screen 3: 음료 선택 -->
+  <div class="screen" id="screen3">
+    <h2>음료 선택 ☕</h2>
+    <p>원하시는 음료를 선택해 주세요.</p>
+    <div class="grid-3" id="drinkGrid"></div>
+    <div id="tempScreen" style="display:none">
+      <p style="margin-top: 20px; margin-bottom: 12px;">온도를 선택해 주세요.</p>
+      <div class="grid-2" id="tempGrid"></div>
+    </div>
+    <div class="buttons"><button class="btn btn-primary" onclick="goScreen(4)" id="drinkNext" style="display:none">다음으로</button><button class="btn btn-ghost" onclick="goScreen(2)">← 이전</button></div>
+  </div>
+
+  <!-- Screen 4: 요청사항 -->
+  <div class="screen" id="screen4">
+    <h2>추가 요청사항</h2>
+    <p>편하신 시술 환경을 선택해 주세요.</p>
+    <div class="checkbox-group" id="requestGroup"></div>
+    <div class="field"><label>기타 요청사항</label><textarea id="requestInput" style="resize:none; height:80px; padding:12px" placeholder="예) 두피 민감해요 / 많이 잘라주세요"></textarea></div>
+    <div class="buttons"><button class="btn btn-primary" onclick="goScreen(5)">다음으로</button><button class="btn btn-ghost" onclick="goScreen(3)">← 이전</button></div>
+  </div>
+
+  <!-- Screen 5: 확인 -->
+  <div class="screen" id="screen5">
+    <h2>체크인 확인</h2>
+    <p>내용을 확인하고 체크인을 완료해 주세요.</p>
+    <div class="summary" id="summaryBox"></div>
+    <div class="alert alert-success" style="display:none;margin-bottom:16px">💬 체크인 완료 시 담당 선생님께 알림이 전송됩니다.</div>
+    <div class="buttons"><button class="btn btn-primary" onclick="doCheckin()">✓ 체크인 완료</button><button class="btn btn-ghost" onclick="goScreen(4)">← 이전</button></div>
+  </div>
+
+  <!-- Screen 6: 완료 -->
+  <div class="screen" id="screen6">
+    <div class="success-screen">
+      <div class="success-icon">✓</div>
+      <div class="success-title">체크인 완료!</div>
+      <div class="success-desc">잠시만 기다려 주시면<br>곧 안내드릴게요 😊</div>
+      <div class="summary" id="finalSummary"></div>
+      <div id="slackAlert" class="alert alert-success" style="display:none">📨 담당 선생님께 알림을 보냈습니다!</div>
+      <div class="countdown">잠시 후 <span id="countdownNum">15</span>초 뒤 처음 화면으로 돌아갑니다.</div>
+    </div>
+  </div>
+</div>
+
+<!-- 관리자 페이지 -->
+<div class="page" id="adminPage">
+  <div class="admin-tabs">
+    <button class="admin-tab active" data-tab="password">🔒 비밀번호</button>
+    <button class="admin-tab" data-tab="designers">디자이너</button>
+    <button class="admin-tab" data-tab="drinks">음료</button>
+    <button class="admin-tab" data-tab="slack">슬랙</button>
+    <button class="admin-tab" data-tab="qr">QR</button>
+  </div>
+
+  <!-- 비밀번호 탭 -->
+  <div class="admin-panel active" id="tab-password">
+    <div class="panel-title">🔒 관리자 비밀번호 변경</div>
+    <div class="panel-desc">관리자 페이지 접속 시 사용할 비밀번호를 변경하세요.</div>
+    <div class="field"><label>현재 비밀번호</label><input type="password" id="curPass" placeholder="현재 비밀번호"/></div>
+    <div class="field"><label>새 비밀번호</label><input type="password" id="newPass" placeholder="새 비밀번호 (4자 이상)"/></div>
+    <div class="field"><label>새 비밀번호 확인</label><input type="password" id="newPassConfirm" placeholder="새 비밀번호 확인"/></div>
+    <div id="passMsg"></div>
+    <button class="btn btn-primary" style="width:100%" onclick="changePassword()">비밀번호 변경</button>
+  </div>
+
+  <!-- 디자이너 탭 -->
+  <div class="admin-panel" id="tab-designers">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px">
+      <div class="panel-title">디자이너 관리</div>
+      <button class="btn btn-primary" style="width:auto; padding:8px 16px; font-size:13px" onclick="openDesignerModal(null)">+ 추가</button>
+    </div>
+    <div class="card-list" id="designerList"></div>
+  </div>
+
+  <!-- 음료 탭 -->
+  <div class="admin-panel" id="tab-drinks">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px">
+      <div class="panel-title">☕ 음료 관리</div>
+      <button class="btn btn-primary" style="width:auto; padding:8px 16px; font-size:13px" onclick="openDrinkModal(null)">+ 추가</button>
+    </div>
+    <div class="menu-list" id="drinkList"></div>
+  </div>
+
+  <!-- 슬랙 탭 -->
+  <div class="admin-panel" id="tab-slack">
+    <div class="panel-title">📢 전체 알림 채널</div>
+    <div class="panel-desc">모든 체크인 알림을 받을 슬랙 채널의 Webhook URL</div>
+    <div class="field"><label>Webhook URL</label><input type="url" id="slackUrl" placeholder="https://hooks.slack.com/services/..."/></div>
+    <div style="display:flex; gap:10px">
+      <button class="btn btn-primary" style="flex:1" onclick="saveSlack()">저장</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="testSlack()">테스트</button>
+    </div>
+    <div id="slackMsg" style="margin-top:10px; font-size:12px"></div>
+  </div>
+
+  <!-- QR 탭 -->
+  <div class="admin-panel" id="tab-qr">
+    <div class="panel-title">📱 셀프 체크인 QR코드</div>
+    <div class="panel-desc">고객님이 QR코드를 스캔하면 바로 체크인 화면으로 이동해요.</div>
+    <div class="qr-section">
+      <div class="qr-display" id="qrWrap"></div>
+      <div class="qr-url" id="qrUrl"></div>
+      <button class="btn btn-primary" style="width:100%" onclick="downloadQR()">📥 QR코드 다운로드</button>
+    </div>
+  </div>
+</div>
+
+<!-- 모달: 디자이너 -->
+<div class="modal" id="designerModal">
+  <div class="modal-content">
+    <div class="modal-title"><span>디자이너 추가</span><button class="modal-close" onclick="closeModal('designerModal')">✕</button></div>
+    <div style="text-align:center; margin-bottom:16px">
+      <div class="admin-card-avatar" style="width:100px; height:100px; margin:0 auto" id="previewAvatar">📷</div>
+      <label style="display:block; margin-top:12px; padding:10px 12px; border:1.5px dashed #ddd; border-radius:8px; cursor:pointer; font-size:13px" onclick="document.getElementById('photoFile').click()">프로필 사진 업로드</label>
+      <input type="file" id="photoFile" accept="image/*" style="display:none" onchange="previewPhoto(event)"/>
+    </div>
+    <div class="field"><label>이름</label><input type="text" id="dmName"/></div>
+    <div class="field"><label>직급</label><select id="dmRole" style="padding:12px; border:1.5px solid #ddd; border-radius:8px; font-family:'Noto Sans KR',sans-serif"><option>스타일리스트</option><option>선임스타일리스트</option><option>수석</option></select></div>
+    <div class="field"><label>슬랙 Webhook URL</label><input type="url" id="dmSlack" placeholder="https://hooks.slack.com/services/..." style="font-size:12px"/></div>
+    <div class="modal-buttons"><button class="btn-cancel" onclick="closeModal('designerModal')">취소</button><button class="btn-save" onclick="saveDesigner()">저장</button></div>
+  </div>
+</div>
+
+<!-- 모달: 음료 -->
+<div class="modal" id="drinkModal">
+  <div class="modal-content">
+    <div class="modal-title"><span>음료 추가</span><button class="modal-close" onclick="closeModal('drinkModal')">✕</button></div>
+    <div class="field"><label>이모지</label><input type="text" id="drEmoji" maxlength="4" placeholder="☕" style="font-size:24px; text-align:center"/></div>
+    <div class="field"><label>음료 이름</label><input type="text" id="drLabel" placeholder="아메리카노"/></div>
+    <div class="field"><label>온도 선택</label><div style="display:flex; gap:12px"><label style="flex:1; display:flex; align-items:center; gap:6px; cursor:pointer"><input type="checkbox" id="drHot" style="cursor:pointer"/><span>🔥 뜨거운</span></label><label style="flex:1; display:flex; align-items:center; gap:6px; cursor:pointer"><input type="checkbox" id="drCold" style="cursor:pointer"/><span>❄️ 아이스</span></label></div></div>
+    <div class="modal-buttons"><button class="btn-cancel" onclick="closeModal('drinkModal')">취소</button><button class="btn-save" onclick="saveDrink()">저장</button></div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCkl-68aIrcGHpwRUC81xrx51uh4Kq6IPo",
+  authDomain: "hair-checkin.firebaseapp.com",
+  projectId: "hair-checkin",
+  storageBucket: "hair-checkin.firebasestorage.app",
+  messagingSenderId: "718954098977",
+  appId: "1:718954098977:web:ff79a39feb1288e3e54e60"
+};
+
+const app = initializeApp(firebaseConfig);
+const fsdb = getFirestore(app);
+const dataDoc = doc(fsdb, 'hairCheckin', 'data');
+
+let db = {
+  designers: [
+    {id:1,name:"보배",role:"스타일리스트",photo:null,slack:""},
+    {id:2,name:"청아",role:"스타일리스트",photo:null,slack:""},
+    {id:3,name:"최고",role:"스타일리스트",photo:null,slack:""},
+    {id:4,name:"연우",role:"스타일리스트",photo:null,slack:""},
+    {id:5,name:"청림",role:"스타일리스트",photo:null,slack:""},
+    {id:6,name:"선우",role:"스타일리스트",photo:null,slack:""},
+    {id:7,name:"승철",role:"스타일리스트",photo:null,slack:""},
+    {id:8,name:"이안",role:"스타일리스트",photo:null,slack:""},
+    {id:9,name:"지유",role:"스타일리스트",photo:null,slack:""},
+  ],
+  drinks: [
+    {id:1,emoji:"🚫",label:"없음",hot:false,cold:false},
+    {id:2,emoji:"☕",label:"아메리카노",hot:true,cold:true},
+    {id:3,emoji:"🥛",label:"라떼",hot:true,cold:true},
+    {id:4,emoji:"🍵",label:"녹차",hot:true,cold:false},
+    {id:5,emoji:"💧",label:"물",hot:false,cold:true},
+  ],
+  reservations: [],
+  slackUrl: "",
+  adminPass: "1234",
+  nextId: 1,
+  nextDesId: 10,
+  nextDrinkId: 6,
+};
+
+const isKiosk = new URLSearchParams(location.search).get('kiosk') === '1';
+if(isKiosk) document.getElementById('adminBtn').style.display = 'none';
+
+let ci = {name:"", phone:"", designerId:null, drink:"", temperature:"", quiet:false, explain:false, request:""};
+let editDesId = null, editDesPhoto = null, editDrinkId = null;
+
+const load = () => {
+  try { const saved = JSON.parse(localStorage.getItem('hairCheckinDB')); if(saved) { db = {...db, ...saved}; } } catch(e) {}
+};
+
+const save = async () => {
+  try { localStorage.setItem('hairCheckinDB', JSON.stringify(db)); } catch(e) {}
+  try { await setDoc(dataDoc, db); } catch(e) { console.warn(e); }
+};
+
+const loadFirebase = async () => {
+  try { const snap = await getDoc(dataDoc); if(snap.exists()) { const d = snap.data(); db = {...db, ...d}; render(); } else { await save(); } } catch(e) {}
+};
+
+onSnapshot(dataDoc, (snap) => { if(snap.exists()) { const d = snap.data(); db = {...db, ...d}; if(document.getElementById('adminPage').classList.contains('active')) render(); } });
+
+// UI 함수들
+const goScreen = (n) => {
+  updateSteps(n);
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen'+n).classList.add('active');
+  window.scrollTo({top:0, behavior:'smooth'});
+};
+
+const updateSteps = (n) => {
+  document.querySelectorAll('.step').forEach(s => {
+    const step = +s.dataset.step;
+    s.className = 'step';
+    if(step < n) s.classList.add('done');
+    if(step === n) s.classList.add('active');
+  });
+};
+
+window.startCheckin = function(){
+  document.getElementById('welcomeScreen').classList.add('hidden');
+  document.getElementById('stepIndicator').style.display = 'flex';
+  renderDesigners();
+  renderDrinks();
+  renderRequests();
+  goScreen(1);
+};
+
+window.goScreen = goScreen;
+
+// 디자이너
+const renderDesigners = () => {
+  const grid = document.getElementById('designerGrid');
+  grid.innerHTML = '';
+  db.designers.forEach(d => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = (d.photo ? `<div class="admin-card-avatar" style="width:60px; height:60px"><img src="${d.photo}"/></div>` : `<div class="admin-card-avatar" style="width:60px; height:60px">${d.name[0]}</div>`) + `<div class="card-label">${d.name}</div>`;
+    card.onclick = () => {
+      document.querySelectorAll('#designerGrid .card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      ci.designerId = d.id;
+    };
+    grid.appendChild(card);
+  });
+};
+
+// 음료
+const renderDrinks = () => {
+  const grid = document.getElementById('drinkGrid');
+  grid.innerHTML = '';
+  ci.drink = '';
+  ci.temperature = '';
+  db.drinks.forEach(d => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `<div class="card-icon">${d.emoji}</div><div class="card-label">${d.label}</div>`;
+    card.onclick = () => {
+      document.querySelectorAll('#drinkGrid .card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      ci.drink = d.label;
+      showTemps(d);
+    };
+    grid.appendChild(card);
+  });
+  if(db.drinks.length > 0) {
+    document.querySelector('#drinkGrid .card').click();
+  }
+};
+
+const showTemps = (drink) => {
+  const tempWrap = document.getElementById('tempScreen');
+  const tempGrid = document.getElementById('tempGrid');
+  const nextBtn = document.getElementById('drinkNext');
+  tempGrid.innerHTML = '';
+  ci.temperature = '';
+  
+  if(drink.hot) {
+    const btn = document.createElement('div');
+    btn.className = 'card-temp';
+    btn.innerHTML = `<div class="temp-icon">🔥</div><div class="temp-label">뜨거운</div>`;
+    btn.onclick = () => {
+      document.querySelectorAll('#tempGrid .card-temp').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      ci.temperature = 'hot';
+    };
+    tempGrid.appendChild(btn);
+  }
+  
+  if(drink.cold) {
+    const btn = document.createElement('div');
+    btn.className = 'card-temp';
+    btn.innerHTML = `<div class="temp-icon">❄️</div><div class="temp-label">아이스</div>`;
+    btn.onclick = () => {
+      document.querySelectorAll('#tempGrid .card-temp').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      ci.temperature = 'cold';
+    };
+    tempGrid.appendChild(btn);
+  }
+  
+  if(drink.hot && !drink.cold) { document.querySelector('#tempGrid .card-temp').click(); }
+  else if(!drink.hot && drink.cold) { document.querySelector('#tempGrid .card-temp').click(); }
+  
+  tempWrap.style.display = (drink.hot || drink.cold) && (!drink.hot || !drink.cold) ? 'block' : 'none';
+  nextBtn.style.display = (drink.hot && drink.cold) || (!drink.hot && !drink.cold && drink.temperature) ? 'block' : 'none';
+  if(!tempWrap.style.display || tempWrap.style.display === 'none') {
+    nextBtn.style.display = 'block';
+  }
+};
+
+// 요청
+const renderRequests = () => {
+  const group = document.getElementById('requestGroup');
+  group.innerHTML = '';
+  const qs = [{id:'quiet', label:'조용히 시술받고 싶어요'}, {id:'explain', label:'시술설명이 필요해요'}];
+  qs.forEach(q => {
+    const div = document.createElement('div');
+    div.className = 'checkbox-item';
+    div.innerHTML = `<input type="checkbox" id="${q.id}"/><label for="${q.id}">${q.label}</label>`;
+    div.querySelector('input').onchange = (e) => {
+      ci.quiet = document.getElementById('quiet').checked;
+      ci.explain = document.getElementById('explain').checked;
+    };
+    group.appendChild(div);
+  });
+};
+
+// 체크인
+window.doCheckin = async function(){
+  const name = document.getElementById('nameInput').value.trim();
+  const phone = document.getElementById('phoneInput').value.trim();
+  if(!name || !phone) { alert('성함과 전화번호를 입력해 주세요.'); return; }
+  
+  const des = db.designers.find(d => d.id === ci.designerId) || {};
+  const reqs = [];
+  if(ci.quiet) reqs.push('조용한 시술');
+  if(ci.explain) reqs.push('설명 필요');
+  if(document.getElementById('requestInput').value) reqs.push(document.getElementById('requestInput').value);
+  const reqStr = reqs.join(' / ');
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'});
+  const drinkStr = ci.temperature ? `${ci.drink} (${ci.temperature==='hot'?'🔥 뜨거운':'❄️ 아이스'})` : ci.drink;
+  
+  db.reservations.push({
+    id: db.nextId++, name, phone: phone.replace(/-/g,'').slice(-4), time: timeStr,
+    designerId: ci.designerId, drink: ci.drink, temperature: ci.temperature,
+    quiet: ci.quiet, explain: ci.explain, request: reqStr
+  });
+  
+  await save();
+  
+  document.getElementById('finalSummary').innerHTML = `<div class="summary-row"><span class="summary-key">고객명</span><span class="summary-val">${name}</span></div>
+    <div class="summary-row"><span class="summary-key">담당 선생님</span><span class="summary-val">${des.name}</span></div>
+    <div class="summary-row"><span class="summary-key">음료</span><span class="summary-val">${drinkStr}</span></div>
+    ${reqStr ? `<div class="summary-row"><span class="summary-key">요청</span><span class="summary-val">${reqStr}</span></div>` : ''}`;
+  
+  const slackUrl = des.slack || db.slackUrl;
+  if(slackUrl) {
+    const text = `💈 *새 고객 체크인!*\n👤 ${name}\n✂️ ${des.name} (${des.role})\n☕ ${drinkStr}\n📋 ${reqStr}\n🕒 ${timeStr}`;
+    try {
+      const res = await fetch(slackUrl, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text})});
+      if(res.ok) { document.getElementById('slackAlert').style.display = 'block'; }
+    } catch(e) { console.warn(e); }
+  }
+  
+  goScreen(6);
+  let sec = 15;
+  const timer = setInterval(() => {
+    sec--;
+    document.getElementById('countdownNum').textContent = sec;
+    if(sec <= 0) {
+      clearInterval(timer);
+      document.getElementById('welcomeScreen').classList.remove('hidden');
+      document.getElementById('stepIndicator').style.display = 'none';
+      document.getElementById('slackAlert').style.display = 'none';
+      ci = {name:"", phone:"", designerId:null, drink:"", temperature:"", quiet:false, explain:false, request:""};
+      document.getElementById('nameInput').value = '';
+      document.getElementById('phoneInput').value = '';
+      document.getElementById('requestInput').value = '';
+      goScreen(1);
+    }
+  }, 1000);
+};
+
+// 관리자
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const page = this.dataset.page;
+    if(page === 'admin' && !isKiosk) {
+      const pass = prompt('관리자 비밀번호:');
+      if(pass !== db.adminPass) { alert('틀렸습니다.'); return; }
+    }
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(page + 'Page').classList.add('active');
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+    if(page === 'admin') render();
+  });
+});
+
+document.querySelectorAll('.admin-tab').forEach(tab => {
+  tab.addEventListener('click', function() {
+    const tabName = this.dataset.tab;
+    document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.admin-panel').forEach(p => p.classList.remove('active'));
+    this.classList.add('active');
+    document.getElementById('tab-' + tabName).classList.add('active');
+    if(tabName === 'qr') initQR();
+  });
+});
+
+document.getElementById('startBtn').addEventListener('click', window.startCheckin);
+
+// 비밀번호
+window.changePassword = function(){
+  const curP = document.getElementById('curPass').value;
+  const newP = document.getElementById('newPass').value;
+  const confirmP = document.getElementById('newPassConfirm').value;
+  const msg = document.getElementById('passMsg');
+  
+  if(curP !== db.adminPass) { msg.textContent = '❌ 현재 비밀번호 틀림'; msg.style.color = '#991B1B'; return; }
+  if(newP.length < 4) { msg.textContent = '❌ 새 비밀번호는 4자 이상'; msg.style.color = '#991B1B'; return; }
+  if(newP !== confirmP) { msg.textContent = '❌ 비밀번호 불일치'; msg.style.color = '#991B1B'; return; }
+  
+  db.adminPass = newP;
+  save();
+  msg.textContent = '✅ 비밀번호 변경됨!';
+  msg.style.color = '#065F46';
+  document.getElementById('curPass').value = '';
+  document.getElementById('newPass').value = '';
+  document.getElementById('newPassConfirm').value = '';
+};
+
+// 디자이너 관리
+const render = () => {
+  document.getElementById('designerList').innerHTML = '';
+  db.designers.forEach(d => {
+    const card = document.createElement('div');
+    card.className = 'admin-card';
+    card.innerHTML = (d.photo ? `<div class="admin-card-avatar"><img src="${d.photo}"/></div>` : `<div class="admin-card-avatar">${d.name[0]}</div>`) +
+      `<div class="admin-card-name">${d.name}</div><div class="admin-card-role">${d.role}</div>` +
+      `${d.slack ? '<div style="font-size:11px; color:#065F46; margin-bottom:8px">✅ 슬랙 연동</div>' : '<div style="font-size:11px; color:#999; margin-bottom:8px">⚪ 미설정</div>'}` +
+      `<div class="admin-card-actions"><button onclick="openDesignerModal(${d.id})">수정</button><button onclick="deleteDes(${d.id})">삭제</button></div>`;
+    document.getElementById('designerList').appendChild(card);
+  });
+  document.getElementById('drinkList').innerHTML = '';
+  db.drinks.forEach(d => {
+    const temps = (d.hot ? '🔥' : '') + (d.cold ? '❄️' : '');
+    const item = document.createElement('div');
+    item.className = 'menu-item';
+    item.innerHTML = `<div class="menu-emoji">${d.emoji}</div><div style="flex:1"><div class="menu-label">${d.label}</div><div class="menu-temp">${temps}</div></div>
+      <div class="menu-actions"><button onclick="openDrinkModal(${d.id})">수정</button><button onclick="deleteDrink(${d.id})">삭제</button></div>`;
+    document.getElementById('drinkList').appendChild(item);
+  });
+};
+
+window.openDesignerModal = function(id){
+  editDesId = id;
+  editDesPhoto = null;
+  document.querySelector('#designerModal .modal-title span').textContent = id ? '디자이너 수정' : '디자이너 추가';
+  if(id) {
+    const d = db.designers.find(x => x.id === id);
+    document.getElementById('dmName').value = d.name;
+    document.getElementById('dmRole').value = d.role;
+    document.getElementById('dmSlack').value = d.slack || '';
+    if(d.photo) { editDesPhoto = d.photo; document.getElementById('previewAvatar').innerHTML = `<img src="${d.photo}"/>`; }
+    else { document.getElementById('previewAvatar').textContent = d.name[0]; }
+  } else {
+    document.getElementById('dmName').value = '';
+    document.getElementById('dmSlack').value = '';
+    document.getElementById('previewAvatar').textContent = '📷';
+  }
+  document.getElementById('designerModal').classList.add('open');
+};
+
+window.previewPhoto = function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    editDesPhoto = ev.target.result;
+    document.getElementById('previewAvatar').innerHTML = `<img src="${ev.target.result}"/>`;
+  };
+  reader.readAsDataURL(file);
+};
+
+window.saveDesigner = function(){
+  const name = document.getElementById('dmName').value.trim();
+  const role = document.getElementById('dmRole').value;
+  const slack = document.getElementById('dmSlack').value.trim();
+  if(!name) { alert('이름 입력'); return; }
+  if(editDesId) {
+    const d = db.designers.find(x => x.id === editDesId);
+    if(d) { d.name = name; d.role = role; d.slack = slack; d.photo = editDesPhoto || d.photo; }
+  } else {
+    db.designers.push({id: db.nextDesId++, name, role, photo: editDesPhoto || null, slack});
+  }
+  save();
+  render();
+  closeModal('designerModal');
+};
+
+window.deleteDes = function(id){
+  const d = db.designers.find(x => x.id === id);
+  if(d && confirm(`${d.name} 삭제?`)) {
+    db.designers = db.designers.filter(x => x.id !== id);
+    save();
+    render();
+  }
+};
+
+window.openDrinkModal = function(id){
+  editDrinkId = id;
+  document.querySelector('#drinkModal .modal-title span').textContent = id ? '음료 수정' : '음료 추가';
+  if(id) {
+    const d = db.drinks.find(x => x.id === id);
+    document.getElementById('drEmoji').value = d.emoji;
+    document.getElementById('drLabel').value = d.label;
+    document.getElementById('drHot').checked = d.hot || false;
+    document.getElementById('drCold').checked = d.cold || false;
+  } else {
+    document.getElementById('drEmoji').value = '';
+    document.getElementById('drLabel').value = '';
+    document.getElementById('drHot').checked = false;
+    document.getElementById('drCold').checked = false;
+  }
+  document.getElementById('drinkModal').classList.add('open');
+};
+
+window.saveDrink = function(){
+  const emoji = document.getElementById('drEmoji').value.trim() || '•';
+  const label = document.getElementById('drLabel').value.trim();
+  const hot = document.getElementById('drHot').checked;
+  const cold = document.getElementById('drCold').checked;
+  if(!label) { alert('음료 이름 입력'); return; }
+  if(!hot && !cold) { alert('온도 선택'); return; }
+  if(editDrinkId) {
+    const d = db.drinks.find(x => x.id === editDrinkId);
+    if(d) { d.emoji = emoji; d.label = label; d.hot = hot; d.cold = cold; }
+  } else {
+    db.drinks.push({id: db.nextDrinkId++, emoji, label, hot, cold});
+  }
+  save();
+  render();
+  closeModal('drinkModal');
+};
+
+window.deleteDrink = function(id){
+  const d = db.drinks.find(x => x.id === id);
+  if(d && confirm(`"${d.label}" 삭제?`)) {
+    db.drinks = db.drinks.filter(x => x.id !== id);
+    save();
+    render();
+  }
+};
+
+// 슬랙
+window.saveSlack = function(){
+  const url = document.getElementById('slackUrl').value.trim();
+  db.slackUrl = url;
+  save();
+  const msg = document.getElementById('slackMsg');
+  msg.textContent = '✅ 저장됨';
+  msg.style.color = '#065F46';
+  setTimeout(() => msg.textContent = '', 2000);
+};
+
+window.testSlack = async function(){
+  const url = document.getElementById('slackUrl').value.trim();
+  if(!url) { alert('Webhook URL 입력'); return; }
+  const msg = document.getElementById('slackMsg');
+  try {
+    const res = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text:'💈 테스트 메시지'})});
+    msg.textContent = res.ok ? '✅ 발송됨' : '❌ 실패';
+    msg.style.color = res.ok ? '#065F46' : '#991B1B';
+  } catch(e) {
+    msg.textContent = '❌ 오류';
+    msg.style.color = '#991B1B';
+  }
+};
+
+// QR
+const initQR = () => {
+  const wrap = document.getElementById('qrWrap');
+  wrap.innerHTML = '';
+  const url = location.origin + location.pathname + '?kiosk=1';
+  document.getElementById('qrUrl').textContent = url;
+  new QRCode(wrap, {text: url, width: 200, height: 200, colorDark:'#000', colorLight:'#fff'});
+};
+
+window.downloadQR = function(){
+  const canvas = document.querySelector('#qrWrap canvas');
+  if(!canvas) return;
+  const link = document.createElement('a');
+  link.download = 'checkin-qr.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+};
+
+window.closeModal = function(id){
+  document.getElementById(id).classList.remove('open');
+};
+
+document.querySelectorAll('.modal').forEach(m => {
+  m.addEventListener('click', e => {
+    if(e.target === m) m.classList.remove('open');
+  });
+});
+
+load();
+loadFirebase();
+</script>
+</body>
+</html>
