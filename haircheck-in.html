@@ -302,26 +302,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--white);color:var(--b
   .checkin-table,.res-table{font-size:12px}
   .checkin-table th,.checkin-table td,.res-table th,.res-table td{padding:9px 7px}
 }
-
-/* ── 방문 유형 선택 ── */
-.visit-type-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:22px}
-.visit-type-card{border:1.5px solid var(--gray-200);border-radius:var(--radius);
-  padding:22px 14px;text-align:center;cursor:pointer;transition:all var(--tr);background:var(--white)}
-.visit-type-card:hover{border-color:var(--accent);background:var(--accent-light)}
-.visit-type-card.selected{border-color:var(--accent);background:var(--accent-light)}
-.vt-icon{font-size:28px;margin-bottom:8px}
-.vt-label{font-size:14px;font-weight:700;margin-bottom:3px}
-.vt-desc{font-size:11px;color:var(--gray-600)}
-.divider-label{font-size:11px;font-weight:600;color:var(--gray-400);letter-spacing:.1em;
-  text-transform:uppercase;text-align:center;margin-bottom:18px;position:relative}
-.divider-label::before,.divider-label::after{content:'';position:absolute;top:50%;
-  width:30%;height:1px;background:var(--gray-200)}
-.divider-label::before{left:0}.divider-label::after{right:0}
-
-/* 워크인 배지 */
-.walkin-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;
-  border-radius:20px;background:#EEF2FF;color:#4B6BDB;font-size:11px;font-weight:600;margin-left:6px}
-
 /* 환영 화면 */
 .welcome-screen{
   position:fixed; top:0; left:0; right:0; bottom:0; z-index:100;
@@ -382,125 +362,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--white);color:var(--b
   width:80px!important; height:80px!important;
   border-radius:50%; object-fit:cover;
 }
-
-/* 시간 선택 그리드 */
-.time-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:20px}
-.time-card{border:1.5px solid var(--gray-200);border-radius:10px;padding:12px 4px;
-  text-align:center;cursor:pointer;transition:all var(--tr);background:var(--white);font-size:13px;font-weight:600}
-.time-card.booked{
-  background:var(--gray-100); border-color:var(--gray-200);
-  color:var(--gray-400); cursor:not-allowed;
-}
-.time-card.booked:hover{ border-color:var(--gray-200); background:var(--gray-100); }
-.time-card.on{border-color:var(--accent);background:var(--accent);color:var(--white)}
-
-/* 개인정보 동의 */
-.privacy-wrap{
-  background:var(--gray-50); border:1px solid var(--gray-200);
-  border-radius:var(--radius); padding:14px; margin-bottom:16px;
-}
-.privacy-title{ font-size:12px; font-weight:700; margin-bottom:8px; color:var(--black); }
-.privacy-content{
-  font-size:11px; color:var(--gray-600); line-height:1.8;
-  margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid var(--gray-200);
-}
-.privacy-checks{ display:flex; gap:20px; }
-.privacy-check-item{
-  display:flex; align-items:center; gap:8px; cursor:pointer;
-  font-size:13px; font-weight:600;
-}
-.prv-radio{
-  width:20px; height:20px; border-radius:50%;
-  border:2px solid var(--gray-200); background:var(--white);
-  transition:all var(--tr); flex-shrink:0;
-}
-.prv-radio.on{
-  border-color:var(--accent); background:var(--accent);
-  box-shadow:inset 0 0 0 3px var(--white);
-}
-/* 일괄 예약 슬롯 */
-.bulk-slot{
-  display:grid; grid-template-columns:64px 1fr 1fr 1fr;
-  gap:6px; align-items:center; padding:6px 4px;
-  border-bottom:1px solid var(--gray-100);
-}
-.bulk-slot:last-child{ border-bottom:none; }
-.bulk-time-label{
-  font-size:12px; font-weight:700; color:var(--accent);
-  text-align:center; background:var(--accent-light);
-  border-radius:6px; padding:4px 0;
-}
-.bulk-slot input{
-  border:1px solid var(--gray-200); border-radius:6px;
-  padding:6px 8px; font-size:12px; font-family:'Noto Sans KR',sans-serif;
-  width:100%;
-}
-.bulk-slot input:focus{ border-color:var(--accent); outline:none; }
-.bulk-slot input.filled{ background:var(--accent-light); border-color:var(--accent); }
-.bulk-slot-header{
-  display:grid; grid-template-columns:64px 1fr 1fr 1fr;
-  gap:6px; padding:4px 4px 8px;
-  font-size:11px; font-weight:700; color:var(--gray-600);
-  border-bottom:2px solid var(--gray-200); margin-bottom:4px;
-}
-.bulk-booked{ background:var(--gray-100); opacity:0.5; pointer-events:none; }
-.bulk-booked .bulk-time-label{ background:var(--gray-200); color:var(--gray-400); }
-
-.res-card{display:flex;align-items:center;gap:14px;padding:16px;border:1.5px solid var(--gray-200);
-  border-radius:var(--radius);margin-bottom:10px;cursor:pointer;transition:all var(--tr);background:var(--white)}
-.res-card:hover{border-color:var(--accent);background:var(--accent-light)}
-.res-card.selected{border-color:var(--accent);background:var(--accent-light)}
-.res-avatar{width:48px;height:48px;border-radius:50%;object-fit:cover;flex-shrink:0}
-.res-avatar-placeholder{width:48px;height:48px;border-radius:50%;background:var(--accent-light);
-  display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;
-  color:var(--accent);flex-shrink:0}
-.res-info{flex:1}
-.ri-time{font-size:15px;font-weight:700;margin-bottom:3px}
-.ri-name{font-size:13px;color:var(--gray-600);margin-bottom:2px}
-.ri-svc{font-size:12px;color:var(--accent)}
-.res-check{width:28px;height:28px;border-radius:50%;background:var(--accent);
-  color:white;display:flex;align-items:center;justify-content:center;font-size:14px;
-  flex-shrink:0;opacity:0;transition:opacity var(--tr)}
-.res-card.selected .res-check{opacity:1}
-.countdown-wrap{margin-top:20px;text-align:center}
-.countdown-msg{font-size:13px;color:var(--gray-600);margin-bottom:10px}
-.countdown-msg span{font-weight:700;color:var(--accent)}
-.countdown-bar-wrap{height:4px;background:var(--gray-200);border-radius:4px;overflow:hidden}
-.countdown-bar{height:100%;background:var(--accent);border-radius:4px;width:100%;
-  transition:width 1s linear}
-.slack-wrap{ display:flex; flex-direction:column; gap:0; }
-.slack-section{ padding:4px 0 20px; }
-.slack-guide{ display:flex; flex-direction:column; gap:10px; margin-bottom:14px; }
-.guide-step{ display:flex; align-items:flex-start; gap:12px; font-size:13px; line-height:1.6; }
-.guide-num{ width:24px; height:24px; border-radius:50%; background:var(--accent); color:var(--white);
-  font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
-.slack-notice{ background:#FFF9F0; border:1px solid #F0DEBB; border-radius:10px;
-  padding:12px 14px; font-size:12px; color:#8A6A3A; line-height:1.6; }
-.slack-des-row{ display:flex; align-items:center; gap:10px;
-  border:1.5px solid var(--gray-200); border-radius:var(--radius); padding:12px 14px;
-  margin-bottom:8px; background:var(--gray-50); }
-.slack-des-info{ flex:1; min-width:0; }
-.slack-des-name{ font-size:14px; font-weight:600; margin-bottom:2px; }
-.slack-des-url{ font-size:11px; color:var(--gray-600); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.slack-des-url.set{ color:var(--green); }
-.slack-des-url.unset{ color:var(--gray-400); }
-.slack-status-ok{ color:var(--green); font-weight:600; }
-.slack-status-err{ color:var(--red); font-weight:600; }
-.menu-mgmt-wrap{ display:flex; flex-direction:column; gap:32px; }
-.menu-section{}
-.menu-item-list{ display:flex; flex-direction:column; gap:8px; margin-top:4px; }
-.menu-item-row{
-  display:flex; align-items:center; gap:12px;
-  background:var(--gray-50); border:1.5px solid var(--gray-200);
-  border-radius:var(--radius); padding:12px 14px;
-  transition:border-color var(--tr);
-}
-.menu-item-row:hover{ border-color:var(--accent); }
-.mir-emoji{ font-size:22px; width:32px; text-align:center; flex-shrink:0; }
-.mir-label{ flex:1; font-size:14px; font-weight:600; }
-.mir-actions{ display:flex; gap:6px; flex-shrink:0; }
-
-/* 음료/가운 옵션 그리드 */
+/* 음료 옵션 그리드 */
 .option-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:6px; }
 .opt-card{
   border:1.5px solid var(--gray-200); border-radius:12px; padding:14px 8px;
@@ -557,23 +419,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--white);color:var(--b
     <div class="step-item" id="s6"><div class="step-dot">6</div><div class="step-label">확인</div></div>
   </div>
 
-  <!-- ── SCREEN 1: 방문 유형 선택 ── -->
-  <div class="ci-screen" id="ci1">
-    <div class="scr-title">방문 유형을 선택해 주세요</div>
-    <div class="visit-type-grid" style="margin-top:20px">
-      <div class="visit-type-card" onclick="selectVisitType('reservation')">
-        <div class="vt-icon">📋</div>
-        <div class="vt-label">예약 고객</div>
-        <div class="vt-desc">예약하신 분</div>
-      </div>
-      <div class="visit-type-card" onclick="selectVisitType('walkin')">
-        <div class="vt-icon">🚶</div>
-        <div class="vt-label">워크인 방문</div>
-        <div class="vt-desc">예약 없이 오신 분</div>
-      </div>
-    </div>
-  </div>
-
   <!-- ── SCREEN 1-2: 예약 고객 정보 입력 ── -->
   <div class="ci-screen" id="ci1b">
     <div class="scr-title">고객 정보 입력</div>
@@ -592,79 +437,12 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--white);color:var(--b
     <button class="btn-ghost" onclick="ciGo(1)">← 이전으로</button>
   </div>
 
-  <!-- ── SCREEN 1-3: 워크인 고객 정보 입력 ── -->
-  <div class="ci-screen" id="ci1d">
-    <div class="scr-title">고객 정보 입력</div>
-    <div class="scr-desc">성함과 전화번호 전체를 입력해 주세요.</div>
-    <div class="field">
-      <label>성함</label>
-      <input type="text" id="wiNameInput2" placeholder="홍길동"/>
-    </div>
-    <div class="field">
-      <label>전화번호</label>
-      <input type="tel" id="wiPhoneInput2" placeholder="010-0000-0000" inputmode="numeric"
-        onkeydown="if(event.key==='Enter')goWalkinStep2()"/>
-      <div class="err-msg" id="wiPhoneErr2">성함을 입력해 주세요.</div>
-    </div>
-
-    <!-- 개인정보 수집 동의 -->
-    <div class="privacy-wrap">
-      <div class="privacy-title">개인정보 수집 및 이용 동의</div>
-      <div class="privacy-content">
-        수집 항목: 성명, 연락처<br>
-        수집 목적: 예약 및 서비스 제공, 고객 관리<br>
-        보유 기간: 서비스 종료 시까지
-      </div>
-      <div class="privacy-checks">
-        <label class="privacy-check-item" onclick="selectPrivacy('agree')">
-          <div class="prv-radio" id="prvAgree"></div>
-          <span>동의합니다</span>
-        </label>
-        <label class="privacy-check-item" onclick="selectPrivacy('disagree')">
-          <div class="prv-radio" id="prvDisagree"></div>
-          <span>동의하지 않습니다</span>
-        </label>
-      </div>
-      <div class="err-msg" id="privacyErr" style="margin-top:10px;line-height:1.6"></div>
-    </div>
-
-    <button class="btn-primary" onclick="goWalkinStep2()">다음으로</button>
-    <button class="btn-ghost" onclick="ciGo(1)">← 이전으로</button>
-  </div>
-
-  <!-- ── SCREEN 1c: 예약 확인 ── -->
-  <div class="ci-screen" id="ci1c">
-    <div class="scr-title">예약 내역 확인 📋</div>
-    <div class="scr-desc">오늘 예약 내역이에요. 체크인하실 예약을 선택해 주세요.</div>
-    <div id="resConfirmList"></div>
-    <button class="btn-ghost" style="margin-top:12px" onclick="ciShowScreen('1b')">← 다시 입력</button>
-    <button class="btn-ghost" onclick="goNewCheckin()" style="color:var(--accent)">예약 없이 체크인하기</button>
-  </div>
-
   <!-- ── SCREEN 2: 디자이너 선택 ── -->
   <div class="ci-screen" id="ci2">
     <div class="scr-title">담당 선생님 선택 ✂️</div>
     <div class="scr-desc">담당 선생님을 선택해 주세요.</div>
     <div class="designer-select-grid" id="designerSelectGrid"></div>
     <button class="btn-ghost" onclick="ciGo(1)">← 이전으로</button>
-  </div>
-
-  <!-- ── SCREEN 3: 시간 선택 ── -->
-  <div class="ci-screen" id="ci3">
-    <div class="scr-title">예약 시간 선택 🕐</div>
-    <div class="scr-desc">예약하신 시간을 선택해 주세요. (복수 선택 가능)</div>
-    <div class="time-grid" id="timeGrid"></div>
-    <button class="btn-primary" style="margin-top:10px" id="timeNextBtn" onclick="goTimeNext()" disabled>다음으로</button>
-    <button class="btn-ghost" onclick="ciGo(2)">← 이전으로</button>
-  </div>
-
-  <!-- ── SCREEN 4: 시술 선택 ── -->
-  <div class="ci-screen" id="ci4">
-    <div class="scr-title">시술 선택 💇</div>
-    <div class="scr-desc">오늘 받으실 시술을 선택해 주세요. (복수 선택 가능)</div>
-    <div class="service-grid" id="serviceGrid"></div>
-    <button class="btn-primary" style="margin-top:10px" onclick="buildDrinkScreen();ciGo(5)">다음으로</button>
-    <button class="btn-ghost" onclick="ciGo(3)">← 이전으로</button>
   </div>
 
   <!-- ── SCREEN 5: 음료 선택 ── -->
@@ -688,19 +466,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--white);color:var(--b
     </div>
     <button class="btn-primary" style="margin-top:10px" onclick="buildGownScreen();ciGo(6)">다음으로</button>
     <button class="btn-ghost" onclick="ciGo(4)">← 이전으로</button>
-  </div>
-
-  <!-- ── SCREEN 6: 가운 선택 ── -->
-  <div class="ci-screen" id="ci6">
-    <div class="scr-title">가운 선택 🥼</div>
-    <div class="scr-desc">원하시는 가운을 선택해 주세요.</div>
-    <div class="option-grid" id="gownGrid"></div>
-    <div class="field" style="margin-top:20px">
-      <label>요청사항 / 주의사항</label>
-      <textarea id="requestInput" placeholder="예) 두피 민감해요 / 많이 잘라주세요"></textarea>
-    </div>
-    <button class="btn-primary" onclick="goToConfirm()">다음으로</button>
-    <button class="btn-ghost" onclick="ciGo(5)">← 이전으로</button>
   </div>
 
   <!-- ── SCREEN 7: 확인 ── -->
@@ -759,7 +524,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--white);color:var(--b
     <div style="overflow-x:auto">
       <table class="checkin-table" id="checkinTable">
         <thead><tr>
-          <th>디자이너</th><th>고객명</th><th>예약시간</th><th>시술</th><th>상태</th><th>관리</th>
+          <th>디자이너</th><th>고객명
         </tr></thead>
         <tbody id="checkinTbody"></tbody>
       </table>
@@ -799,15 +564,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--white);color:var(--b
   <div class="admin-panel" id="tab-menus">
     <div class="menu-mgmt-wrap">
 
-      <!-- 시술 메뉴 -->
-      <div class="menu-section">
-        <div class="section-header">
-          <h2>✂️ 시술 메뉴</h2>
-          <button class="btn-add" onclick="openMenuModal('service')">+ 항목 추가</button>
-        </div>
-        <div class="menu-item-list" id="serviceMenuList"></div>
-      </div>
-
       <!-- 음료 메뉴 -->
       <div class="menu-section">
         <div class="section-header">
@@ -816,18 +572,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--white);color:var(--b
         </div>
         <div class="menu-item-list" id="drinkMenuList"></div>
       </div>
-
-      <!-- 가운 메뉴 -->
-      <div class="menu-section">
-        <div class="section-header">
-          <h2>🥼 가운 메뉴</h2>
-          <button class="btn-add" onclick="openMenuModal('gown')">+ 항목 추가</button>
-        </div>
-        <div class="menu-item-list" id="gownMenuList"></div>
-      </div>
-
-    </div>
-  </div>
 
   <!-- ── TAB: 슬랙 설정 ── -->
   <div class="admin-panel" id="tab-slack">
@@ -927,14 +671,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--white);color:var(--b
      MODALS
 ══════════════════════════════════════ -->
 
-<!-- 예약 추가/수정 모달 -->
-<div class="modal-overlay" id="resModal">
-  <div class="modal" style="max-width:600px;max-height:90vh;overflow-y:auto">
-    <div class="modal-title">
-      <span id="resModalTitle">예약 추가</span>
-      <button class="modal-close" onclick="closeModal('resModal')">✕</button>
-    </div>
-
     <!-- 수정 모드: 기존 단일 입력 폼 -->
     <div id="resEditForm">
       <div class="field"><label>고객 이름</label><input type="text" id="rm-name" placeholder="홍길동"/></div>
@@ -951,44 +687,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--white);color:var(--b
         <button class="btn-save" onclick="saveReservation()">저장하기</button>
       </div>
     </div>
-
-    <!-- 추가 모드: 일괄 입력 폼 -->
-    <div id="resBulkForm" style="display:none">
-      <!-- 1단계: 디자이너 + 날짜 선택 -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-        <div class="field" style="margin:0">
-          <label>담당 디자이너</label>
-          <select id="bulk-designer" onchange="buildBulkTimeGrid()">
-            <option value="">선택</option>
-          </select>
-        </div>
-        <div class="field" style="margin:0">
-          <label>예약 날짜</label>
-          <input type="date" id="bulk-date" onchange="buildBulkTimeGrid()"/>
-        </div>
-      </div>
-
-      <!-- 시술 기본값 -->
-      <div class="field" style="margin-bottom:16px">
-        <label>시술 (전체 기본값, 개별 변경 가능)</label>
-        <input type="text" id="bulk-service-default" placeholder="커트" value="커트"/>
-      </div>
-
-      <!-- 시간별 입력 그리드 -->
-      <div id="bulkTimeGrid" style="display:none">
-        <div style="font-size:12px;color:var(--gray-600);margin-bottom:8px">
-          시간 칸을 클릭해서 고객 정보를 입력하세요. 비워두면 예약 없음으로 처리해요.
-        </div>
-        <div id="bulkSlots"></div>
-      </div>
-
-      <div class="modal-footer" style="margin-top:16px">
-        <button class="btn-cancel" onclick="closeModal('resModal')">취소</button>
-        <button class="btn-save" onclick="saveBulkReservation()">일괄 저장</button>
-      </div>
-    </div>
-  </div>
-</div>
 
 <!-- 디자이너 추가/수정 모달 -->
 <div class="modal-overlay" id="desModal">
@@ -1128,15 +826,6 @@ let DB = {
     {num:"4",occupied:true}, {num:"5",occupied:false},{num:"6",occupied:false},
     {num:"7",occupied:true}, {num:"8",occupied:false},
   ],
-  services: [
-    {id:1,emoji:"✂️",label:"커트"},
-    {id:2,emoji:"🌀",label:"펌"},
-    {id:3,emoji:"🎨",label:"염색"},
-    {id:4,emoji:"🌿",label:"뿌리 염색"},
-    {id:5,emoji:"⚡",label:"탈색"},
-    {id:6,emoji:"💆",label:"케어 트리트먼트"},
-    {id:7,emoji:"🌱",label:"두피 케어"},
-    {id:8,emoji:"💨",label:"드라이"},
   ],
   drinks: [
     {id:1,emoji:"🚫",label:"없음"},
@@ -1146,10 +835,6 @@ let DB = {
     {id:5,emoji:"🍵",label:"녹차"},
     {id:6,emoji:"🧃",label:"주스"},
   ],
-  gowns: [
-    {id:1,emoji:"🚫",label:"없음"},
-    {id:2,emoji:"🥼",label:"일반 가운"},
-    {id:3,emoji:"👘",label:"대형 가운"},
   ],
   nextId: 1,
   nextDesId: 10,
@@ -1248,59 +933,6 @@ function startCheckin(){
   document.getElementById('welcomeScreen').classList.add('hidden');
   document.getElementById('stepBar').style.display = 'flex';
   ciShowScreen(1); setStep(1);
-}
-
-// 방문 유형 선택
-function selectVisitType(type){
-  CI.isWalkin = (type === 'walkin');
-  document.querySelectorAll('.visit-type-card').forEach(c=>c.classList.remove('selected'));
-  event.currentTarget.classList.add('selected');
-  setTimeout(()=>{
-    if(type === 'walkin'){
-      // 워크인: 전체 전화번호 + 개인정보 동의
-      document.getElementById('wiNameInput2').value = '';
-      document.getElementById('wiPhoneInput2').value = '';
-      document.getElementById('wiPhoneErr2').classList.remove('show');
-      document.getElementById('privacyErr').classList.remove('show');
-      document.querySelectorAll('.prv-radio').forEach(r=>r.classList.remove('on'));
-      CI.privacyAgreed = false;
-      ciShowScreen('1d');
-    } else {
-      // 예약 고객: 이름 + 전화번호 4자리
-      ciShowScreen('1b');
-    }
-  }, 200);
-}
-
-// 개인정보 동의 선택
-function selectPrivacy(choice){
-  CI.privacyAgreed = (choice === 'agree');
-  document.getElementById('prvAgree').classList.toggle('on', choice==='agree');
-  document.getElementById('prvDisagree').classList.toggle('on', choice==='disagree');
-  const errEl = document.getElementById('privacyErr');
-  if(choice === 'disagree'){
-    errEl.textContent = '⚠️ 미동의 시 다음 방문 때 담당 선생님 및 시술 내역 확인이 어려울 수 있어요.';
-    errEl.classList.add('show');
-    errEl.style.color = 'var(--accent)';
-  } else {
-    errEl.classList.remove('show');
-  }
-}
-
-// 워크인 다음 단계
-function goWalkinStep2(){
-  const name = document.getElementById('wiNameInput2').value.trim();
-  const phone = document.getElementById('wiPhoneInput2').value.trim();
-  const errEl = document.getElementById('wiPhoneErr2');
-
-  if(!name){ errEl.textContent='성함을 입력해 주세요.'; errEl.classList.add('show'); return; }
-  if(!phone){ errEl.textContent='전화번호를 입력해 주세요.'; errEl.classList.add('show'); return; }
-  errEl.classList.remove('show');
-
-  CI.name = name;
-  CI.phone = phone.replace(/-/g,'').slice(-4);
-  buildDesignerSelectGrid();
-  ciGo(2);
 }
 
 // ci1b 화면 전용 show
@@ -1407,26 +1039,6 @@ function goStep2(){
   CI.name = name;
   CI.phone = phone;
 
-  // 예약 내역 검색 (이름 + 전화번호 일치, 미체크인)
-  const today = new Date().toISOString().split('T')[0];
-  const found = DB.reservations.filter(r=>
-    r.customerName === name &&
-    r.phone === phone &&
-    !r.checkinStatus &&
-    (!r.date || r.date === today)
-  );
-
-  if(found.length > 0){
-    // 예약 있으면 예약 확인 화면
-    buildResConfirmList(found);
-    ciShowScreen('1c');
-  } else {
-    // 예약 없으면 기존 흐름 (디자이너 선택)
-    buildDesignerSelectGrid();
-    ciGo(2);
-  }
-}
-
 function buildResConfirmList(list){
   const wrap = document.getElementById('resConfirmList');
   wrap.innerHTML = '';
@@ -1491,74 +1103,6 @@ function buildDesignerSelectGrid(){
   });
 }
 
-// ── STEP 3: 시간 선택 ──
-function buildTimeGrid(){
-  const grid = document.getElementById('timeGrid');
-  grid.innerHTML = '';
-  CI.times = [];
-  CI.time = '';
-
- const today = new Date().toISOString().split('T')[0];
-  const bookedTimes = DB.reservations
-    .filter(r => r.designerId === CI.designerId && (!r.date || r.date === today))
-    .map(r => r.time);
-
-  const times = [];
-  for(let h=10; h<=20; h++){
-    times.push(`${String(h).padStart(2,'0')}:00`);
-    if(h < 20) times.push(`${String(h).padStart(2,'0')}:30`);
-  }
-
-  times.forEach(t=>{
-    const isBooked = bookedTimes.includes(t);
-    const card = document.createElement('div');
-    card.className = 'time-card' + (isBooked ? ' booked' : '');
-    card.innerHTML = isBooked
-      ? `${t}<br><span style="font-size:10px;opacity:.7">예약됨</span>`
-      : t;
-
-    if(!isBooked){
-      card.onclick = ()=>{
-        card.classList.toggle('on');
-        if(card.classList.contains('on')){
-          CI.times.push(t);
-        } else {
-          CI.times = CI.times.filter(x=>x!==t);
-        }
-        const btn = document.getElementById('timeNextBtn');
-        if(btn) btn.disabled = CI.times.length === 0;
-      };
-    }
-    grid.appendChild(card);
-  });
-
-  const btn = document.getElementById('timeNextBtn');
-  if(btn) btn.disabled = true;
-}
-
-function goTimeNext(){
-  if(CI.times.length === 0) return;
-  CI.time = CI.times.sort().join(', ');
-  buildServiceScreen();
-  ciGo(4);
-}
-
-// ── STEP 4: 시술 선택 ──
-function buildServiceScreen(){
-  const grid=document.getElementById('serviceGrid');grid.innerHTML='';
-  CI.services=[];
-  DB.services.forEach(s=>{
-    const tag=document.createElement('div');tag.className='svc-tag';
-    tag.innerHTML=`<div style="font-size:18px;margin-bottom:3px">${s.emoji}</div>${s.label}`;
-    tag.onclick=()=>{
-      tag.classList.toggle('on');
-      if(tag.classList.contains('on')) CI.services.push(s.label);
-      else CI.services=CI.services.filter(x=>x!==s.label);
-    };
-    grid.appendChild(tag);
-  });
-}
-
 // ── STEP 5: 음료 선택 ──
 function buildDrinkScreen(){
   const grid=document.getElementById('drinkGrid');grid.innerHTML='';
@@ -1589,21 +1133,6 @@ function selectTemp(type){
   CI.drinkTemp = type;
   document.getElementById('tempHot').classList.toggle('on', type==='hot');
   document.getElementById('tempIce').classList.toggle('on', type==='ice');
-}
-
-// ── STEP 6: 가운 선택 ──
-function buildGownScreen(){
-  const grid=document.getElementById('gownGrid');grid.innerHTML='';
-  CI.gown = DB.gowns.length ? DB.gowns[0].label : '없음';
-  DB.gowns.forEach((g,i)=>{
-    const card=document.createElement('div');card.className='opt-card'+(i===0?' on':'');
-    card.innerHTML=`<div class="opt-icon">${g.emoji}</div><div class="oc-label">${g.label}</div>`;
-    card.onclick=()=>{
-      document.querySelectorAll('#gownGrid .opt-card').forEach(c=>c.classList.remove('on'));
-      card.classList.add('on'); CI.gown=g.label;
-    };
-    grid.appendChild(card);
-  });
 }
 
 // 음료 선택 화면으로 갈 때 음료/가운 빌드
@@ -1653,10 +1182,7 @@ function doCheckIn(){
   document.getElementById('finalCard').innerHTML=`
     <div class="fc-row"><span>고객명</span><span>${CI.name}</span></div>
     <div class="fc-row"><span>담당 선생님</span><span>${des.name}</span></div>
-    <div class="fc-row"><span>예약 시간</span><span>${CI.time}</span></div>
-    <div class="fc-row"><span>시술</span><span>${svcList}</span></div>
     <div class="fc-row"><span>음료</span><span>${drinkLabel}</span></div>
-    <div class="fc-row"><span>가운</span><span>${CI.gown}</span></div>`;
   ciShowScreen(8); setStep(6);
   sendSlackCheckin({
     desName: des.name, desRole: des.role||'', desSlackUrl: des.slackUrl||'',
@@ -1705,7 +1231,7 @@ function resetCI(){
 
 // 음료 화면 이동 시 빌드
 document.addEventListener('DOMContentLoaded', ()=>{
-  // ci5(음료), ci6(가운) 버튼 감지 위해 이미 HTML onclick으로 처리됨
+  // ci5(음료) 버튼 감지 위해 이미 HTML onclick으로 처리됨
 });
 
 
@@ -1741,12 +1267,6 @@ function renderStats(){
 
 function getDesName(id){const d=DB.designers.find(x=>x.id===id);return d?d.name:'?';}
 function getDesPhoto(id){const d=DB.designers.find(x=>x.id===id);return d?d.photo:null;}
-
-function statusBadge(s){
-  const map={waiting:['대기중','waiting'],inprogress:['시술중','inprogress'],done:['완료','done']};
-  const [label,cls]=map[s]||['미체크인','done'];
-  return `<span class="status-badge ${cls}">${label}</span>`;
-}
 
 function renderCheckinTable(){
   const tbody=document.getElementById('checkinTbody');tbody.innerHTML='';
@@ -2039,25 +1559,6 @@ function saveReservation(){
   const desId=parseInt(document.getElementById('rm-designer').value);
   const service=document.getElementById('rm-service').value.trim();
   if(!name||!phone||!date||!time||!service){alert('모든 항목을 입력해 주세요.');return;}
-
-  // 중복 예약 체크 (같은 디자이너 + 같은 날짜 + 같은 시간)
-  const duplicate = DB.reservations.find(r=>
-    r.designerId === desId &&
-    r.date === date &&
-    r.time === time &&
-    r.id !== editResId
-  );
-  if(duplicate){
-    showConfirm(
-      '중복 예약 확인',
-      `${getDesName(desId)} 선생님의 ${date} ${time} 에 이미 "${duplicate.customerName}" 고객 예약이 있어요. 그래도 추가할까요?`,
-      '추가하기',
-      ()=>{ _doSaveReservation(name,phone,date,time,desId,service); }
-    );
-    return;
-  }
-  _doSaveReservation(name,phone,date,time,desId,service);
-}
 
 function _doSaveReservation(name,phone,date,time,desId,service){
   if(editResId){
