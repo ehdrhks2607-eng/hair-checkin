@@ -2,77 +2,66 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>메종드아이디헤어 셀프 체크인</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<title>메종드아이디헤어 체크인</title>
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --black:#0F0F0F;--white:#FAFAF8;--gray-50:#F7F7F5;--gray-100:#EFEFEC;
-  --gray-200:#E2E2DD;--gray-400:#AEAEA6;--gray-600:#6B6B62;
-  --accent:#B8966E;--accent-light:#F5EDE0;--accent-dark:#9A7A56;
-  --green:#4A9B6F;--red:#C75B5B;--blue:#5B7FC7;
-  --radius:14px;--radius-sm:8px;
-  --shadow:0 4px 24px rgba(0,0,0,0.06);
-  --tr:all 0.25s ease-in-out;
-}
-body{font-family:'Noto Sans KR',sans-serif;background:var(--white);color:var(--black);min-height:100vh;padding-top:70px}
+  :root { --accent: #B8966E; --bg-gold: #F0E6D6; --gray: #E2E2DD; }
+  body { font-family: 'Noto Sans KR', sans-serif; background: #FAFAF8; padding: 20px; }
+  .container { max-width: 450px; margin: 0 auto; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+  .page { display: none; } .page.active { display: block; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
+  
+  /* 디자인: 선택 시 골드 베이지 & 굵은 테두리 강조 */
+  .card { border: 2px solid var(--gray); padding: 15px; text-align: center; border-radius: 10px; cursor: pointer; transition: 0.2s; }
+  .card.active { border: 3px solid var(--accent) !important; background-color: var(--bg-gold) !important; font-weight: bold; }
+  
+  button { width: 100%; padding: 15px; background: #000; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+  input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+</style>
+</head>
+<body>
 
-/* 글로벌 네비게이션 (항상 최상단 유지) */
-.mode-nav{position:fixed;top:0;left:0;right:0;z-index:9999;display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:var(--white);border-bottom:1px solid var(--gray-200);box-shadow:0 2px 10px rgba(0,0,0,0.02)}
-.shop-brand{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--black);text-decoration:none}
-.shop-brand span{font-family:'Noto Sans KR',sans-serif;font-size:11px;font-weight:400;color:var(--gray-600);margin-left:6px}
-.mode-toggle{display:flex;gap:8px}
-.mode-btn{padding:8px 14px;border-radius:20px;border:1.5px solid var(--gray-200);font-size:12px;font-weight:600;cursor:pointer;background:#fff;color:var(--gray-600);transition:var(--tr)}
-.mode-btn:hover{border-color:var(--black);color:var(--black)}
-.mode-btn.active{background:var(--black);color:var(--white);border-color:var(--black)}
+<div class="container">
+  <div id="step1" class="page active">
+    <h2>1. 방문 정보</h2>
+    <input type="text" id="name" placeholder="성함">
+    <input type="tel" id="phone" placeholder="연락처">
+    <button onclick="next(2)">다음</button>
+  </div>
 
-.page{display:none;padding-bottom:80px}
-.page.active{display:block}
+  <div id="step2" class="page">
+    <h2>2. 맞춤 서비스</h2>
+    <p>담당 디자이너</p>
+    <div class="grid" id="desList">
+      <div class="card" onclick="select(this)">보배</div>
+      <div class="card" onclick="select(this)">청아</div>
+    </div>
+    <p>맞춤 케어</p>
+    <div class="grid">
+      <div class="card" onclick="select(this)">🤫 조용히 시술 희망</div>
+      <div class="card" onclick="select(this)">📋 시술 설명 필요</div>
+    </div>
+    <button onclick="finish()">체크인 완료 및 알림 발송</button>
+  </div>
+</div>
 
-/* 체크인 컨테이너 */
-.ci-wrap{max-width:480px;margin:0 auto;padding:20px}
-.ci-box{background:#fff;border-radius:var(--radius);padding:28px;box-shadow:var(--shadow);border:1px solid rgba(0,0,0,0.03)}
+<script>
+  function next(n) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('step' + n).classList.add('active');
+  }
+  
+  function select(el) {
+    // 디자이너 카드인 경우 기존 선택 해제
+    if(el.parentElement.id === 'desList') {
+      document.querySelectorAll('#desList .card').forEach(c => c.classList.remove('active'));
+    }
+    el.classList.toggle('active');
+  }
 
-/* 스크린 트랜지션 */
-.ci-screen{display:none;animation:fadeIn 0.3s ease forwards}
-.ci-screen.active{display:block}
-@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-
-.scr-title{font-size:22px;font-weight:700;margin-bottom:6px;letter-spacing:-0.5px}
-.scr-desc{font-size:13px;color:var(--gray-600);margin-bottom:24px}
-
-/* 폼 필드 */
-.field{margin-bottom:18px}
-.field label{display:block;font-size:11px;font-weight:700;color:var(--gray-600);margin-bottom:8px;letter-spacing:0.5px}
-.field input[type="text"], .field input[type="tel"], .field textarea, .field select{width:100%;padding:14px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:14px;font-family:'Noto Sans KR',sans-serif;outline:none;background:var(--gray-50);transition:var(--tr)}
-.field input:focus, .field textarea:focus{border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px var(--accent-light)}
-.field textarea{resize:none;height:70px}
-
-/* 고대비 카드 디자인 (요청사항 3 완벽 반영) */
-.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
-
-.sel-card{border:2px solid var(--gray-200);border-radius:12px;padding:16px 8px;text-align:center;cursor:pointer;background:#fff;transition:var(--tr);display:flex;flex-direction:column;align-items:center;justify-content:center}
-.sel-card:hover{border-color:var(--accent);background:var(--gray-50)}
-/* 선택 시 색상 명확화 */
-.sel-card.active{border:2.5px solid var(--accent) !important;background-color:#F0E6D6 !important;color:#000 !important;font-weight:700 !important;box-shadow:0 4px 14px rgba(184,150,110,0.3) !important}
-
-.sel-card .av{width:56px;height:56px;border-radius:50%;background:var(--gray-100);margin-bottom:10px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:var(--accent);overflow:hidden}
-.sel-card .av img{width:100%;height:100%;object-fit:cover}
-.sel-card.active .av{background:var(--accent);color:#fff}
-.sel-card .nm{font-size:13px;font-weight:600;margin-bottom:2px}
-.sel-card .sub{font-size:11px;color:var(--gray-600)}
-.sel-card.active .sub{color:#000}
-
-.sel-card .ico{font-size:24px;margin-bottom:6px}
-
-/* 버튼 */
-.btn-primary{width:100%;padding:15px;border:none;border-radius:var(--radius-sm);background:var(--black);color:#fff;font-size:14px;font-weight:700;cursor:pointer;transition:var(--tr);margin-top:10px}
-.btn-primary:hover{background:#222}
-.btn-ghost{width:100%;padding:13px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);background:transparent;color:var(--gray-600);font-size:13px;font-weight:600;cursor:pointer;transition:var(--tr);margin-top:8px}
-.btn-ghost:hover{border-color:var(--black);color:var(--black)}
-
-/* 서머리 & 완료 */
-.sum-box{background:var(--gray-50);border-radius:12px;padding:20px;margin-bottom:20px;border:1px solid
+  function finish() {
+    alert("체크인이 완료되었습니다. 슬랙 알림을 발송합니다.");
+    location.reload();
+  }
+</script>
+</body>
+</html>
